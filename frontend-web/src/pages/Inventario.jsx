@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 
-const API = 'http://localhost:3001/api'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 const IconPlus = () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
