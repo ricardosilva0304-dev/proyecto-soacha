@@ -7,7 +7,7 @@ const clientesRouter = require('./routes/clientes')
 const ventasRouter = require('./routes/ventas')
 
 const app = express()
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 8080
 
 // Permitir todos los origenes
 app.use(cors())
