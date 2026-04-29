@@ -1,5 +1,7 @@
 import { useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 const titulos = {
     '/dashboard': { titulo: 'Dashboard', sub: 'Resumen general del negocio', Icon: IconDashboard },
@@ -60,6 +62,8 @@ function Header() {
     const location = useLocation()
     const info = titulos[location.pathname]
     const [hora, setHora] = useState(new Date())
+    const { usuario, logout } = useAuth()
+    const navigate = useNavigate()
 
     useEffect(() => {
         const intervalo = setInterval(() => setHora(new Date()), 1000)
@@ -73,6 +77,11 @@ function Header() {
     const fecha = hora.toLocaleDateString('es-CO', {
         weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
     })
+
+    const handleLogout = () => {
+        logout()
+        navigate('/login')
+    }
 
     const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1)
 
@@ -136,16 +145,18 @@ function Header() {
                 <div className="w-px h-6 bg-slate-200" />
 
                 {/* Usuario */}
-                <button className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors px-3 py-1.5 rounded-xl">
+                <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 hover:bg-red-50 hover:border-red-200 transition-colors px-3 py-1.5 rounded-xl group"
+                >
                     <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                        A
+                        {usuario?.nombre?.[0] || 'A'}
                     </div>
                     <div className="text-left hidden md:block">
-                        <p className="text-xs font-bold text-slate-700 leading-tight">Administrador</p>
-                        <p className="text-xs text-slate-400 leading-tight">GestiónSoacha</p>
-                    </div>
-                    <div className="text-slate-400 hidden md:block">
-                        <IconChevron />
+                        <p className="text-xs font-bold text-slate-700 leading-tight group-hover:text-red-600 transition-colors">
+                            {usuario?.nombre || 'Administrador'}
+                        </p>
+                        <p className="text-xs text-slate-400 leading-tight">Cerrar sesión</p>
                     </div>
                 </button>
 

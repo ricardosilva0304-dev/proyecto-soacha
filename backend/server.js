@@ -5,15 +5,15 @@ require('dotenv').config()
 const productosRouter = require('./routes/productos')
 const clientesRouter = require('./routes/clientes')
 const ventasRouter = require('./routes/ventas')
+const authRouter = require('./routes/auth')
 
 const app = express()
 const PORT = process.env.PORT || 8080
 
-// Permitir todos los origenes
 app.use(cors())
-
 app.use(express.json())
 
+app.use('/api/auth', authRouter)
 app.use('/api/productos', productosRouter)
 app.use('/api/clientes', clientesRouter)
 app.use('/api/ventas', ventasRouter)
