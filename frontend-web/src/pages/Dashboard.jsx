@@ -1,59 +1,52 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import {
-    LineChart, Line, BarChart, Bar, XAxis, YAxis,
-    CartesianGrid, Tooltip, ResponsiveContainer, PieChart,
-    Pie, Cell, Legend
-} from 'recharts'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const COLORS = ['#16a34a', '#0ea5e9', '#8b5cf6', '#f59e0b', '#f43f5e', '#10b981']
 
-const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4']
+function StatCard({ title, value, sub, icon, colorClass, trend, trendUp }) {
+    return (
+        <div className="card card-hover stat-card" style={{ cursor: 'default' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div style={{
+                    width: 44, height: 44, borderRadius: 12,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    ...colorClass
+                }}>
+                    {icon}
+                </div>
+                {trend && (
+                    <span style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        fontSize: 12, fontWeight: 700,
+                        color: trendUp ? '#15803d' : '#dc2626',
+                        background: trendUp ? '#dcfce7' : '#fee2e2',
+                        padding: '3px 10px', borderRadius: 100
+                    }}>
+                        {trendUp ? '↑' : '↓'} {trend}
+                    </span>
+                )}
+            </div>
+            <div style={{ marginTop: 16 }}>
+                <p className="font-display" style={{ fontSize: 28, fontWeight: 800, color: '#1e2736', lineHeight: 1 }}>{value}</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#3d4f66', marginTop: 4 }}>{title}</p>
+                {sub && <p style={{ fontSize: 11, color: '#8098b8', marginTop: 2 }}>{sub}</p>}
+            </div>
+        </div>
+    )
+}
 
-const IconBox = () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-    </svg>
-)
-const IconUsers = () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-)
-const IconCart = () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-    </svg>
-)
-const IconMoney = () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-)
-const IconWarning = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-    </svg>
-)
-const IconTrend = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-    </svg>
-)
-
-const TooltipPersonalizado = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
+const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload?.length) {
         return (
-            <div className="bg-white border border-slate-200 rounded-xl shadow-lg px-3 py-2.5">
-                <p className="text-xs font-semibold text-slate-500 mb-1">{label}</p>
+            <div style={{
+                background: '#0f1318', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 12, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
+            }}>
+                <p style={{ fontSize: 11, color: '#5a7090', marginBottom: 6 }}>{label}</p>
                 {payload.map((p, i) => (
-                    <p key={i} className="text-sm font-bold" style={{ color: p.color }}>
+                    <p key={i} style={{ fontSize: 14, fontWeight: 700, color: p.color }}>
                         {p.name === 'ingresos' ? `$${Number(p.value).toLocaleString()}` : p.value}
                     </p>
                 ))}
@@ -61,37 +54,6 @@ const TooltipPersonalizado = ({ active, payload, label }) => {
         )
     }
     return null
-}
-
-function StatCard({ titulo, valor, sub, Icon, colorIcon, colorBg, trend }) {
-    return (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <div className="flex items-start justify-between mb-4">
-                <div className={`w-11 h-11 ${colorBg} rounded-xl flex items-center justify-center ${colorIcon}`}>
-                    <Icon />
-                </div>
-                {trend && (
-                    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
-                        <IconTrend />
-                        {trend}
-                    </span>
-                )}
-            </div>
-            <p className="text-3xl font-bold text-slate-800 mb-1">{valor}</p>
-            <p className="text-sm font-semibold text-slate-600">{titulo}</p>
-            {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
-        </div>
-    )
-}
-
-function getInitials(nombre) {
-    if (!nombre) return 'CG'
-    return nombre.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
-}
-
-function getColor(id) {
-    const colors = ['bg-blue-500', 'bg-violet-500', 'bg-emerald-500', 'bg-rose-500', 'bg-amber-500']
-    return colors[id % colors.length]
 }
 
 function Dashboard() {
@@ -110,10 +72,9 @@ function Dashboard() {
             setClientes(c.data)
             setVentas(v.data)
             setLoading(false)
-        })
+        }).catch(() => setLoading(false))
     }, [])
 
-    // Ventas por día (últimos 7 días)
     const ventasPorDia = () => {
         const dias = []
         for (let i = 6; i >= 0; i--) {
@@ -121,240 +82,235 @@ function Dashboard() {
             fecha.setDate(fecha.getDate() - i)
             const label = fecha.toLocaleDateString('es-CO', { weekday: 'short', day: '2-digit' })
             const fechaStr = fecha.toISOString().split('T')[0]
-            const ventasDia = ventas.filter(v => v.fecha?.split('T')[0] === fechaStr)
-            const ingresos = ventasDia.reduce((s, v) => s + Number(v.total), 0)
-            dias.push({ dia: label, ingresos, ventas: ventasDia.length })
+            const v = ventas.filter(v => v.fecha?.split('T')[0] === fechaStr)
+            dias.push({ dia: label, ingresos: v.reduce((s, x) => s + Number(x.total), 0), count: v.length })
         }
         return dias
     }
 
-    // Productos más vendidos
     const productosMasVendidos = () => {
-        const conteo = {}
-        ventas.forEach(v => {
-            v.detalle_ventas?.forEach(d => {
-                const nombre = d.productos?.nombre || 'Desconocido'
-                conteo[nombre] = (conteo[nombre] || 0) + d.cantidad
-            })
-        })
-        return Object.entries(conteo)
-            .map(([nombre, cantidad]) => ({ nombre, cantidad }))
-            .sort((a, b) => b.cantidad - a.cantidad)
-            .slice(0, 5)
+        const c = {}
+        ventas.forEach(v => v.detalle_ventas?.forEach(d => {
+            const n = d.productos?.nombre || 'Desconocido'
+            c[n] = (c[n] || 0) + d.cantidad
+        }))
+        return Object.entries(c).map(([nombre, cantidad]) => ({ nombre, cantidad })).sort((a, b) => b.cantidad - a.cantidad).slice(0, 5)
     }
 
-    // Ventas por categoría
     const ventasPorCategoria = () => {
-        const conteo = {}
-        productos.forEach(p => {
-            const cat = p.categoria || 'Sin categoría'
-            if (!conteo[cat]) conteo[cat] = 0
-            conteo[cat] += p.stock
-        })
-        return Object.entries(conteo).map(([name, value]) => ({ name, value }))
+        const c = {}
+        productos.forEach(p => { const cat = p.categoria || 'Sin categoría'; c[cat] = (c[cat] || 0) + p.stock })
+        return Object.entries(c).map(([name, value]) => ({ name, value }))
     }
 
-    const totalVentas = ventas.reduce((sum, v) => sum + Number(v.total), 0)
+    const totalVentas = ventas.reduce((s, v) => s + Number(v.total), 0)
     const stockBajo = productos.filter(p => p.stock <= 10)
     const sinStock = productos.filter(p => p.stock === 0)
-    const valorInventario = productos.reduce((s, p) => s + p.precio * p.stock, 0)
     const dataDia = ventasPorDia()
     const dataMasVendidos = productosMasVendidos()
     const dataCategoria = ventasPorCategoria()
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="text-center">
-                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                    <p className="text-sm text-slate-400">Cargando datos...</p>
-                </div>
-            </div>
-        )
-    }
+    if (loading) return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 16 }}>
+            <div className="spinner spinner-dark" style={{ width: 32, height: 32, borderWidth: 3 }} />
+            <p style={{ color: '#8098b8', fontSize: 14 }}>Cargando información...</p>
+        </div>
+    )
 
     return (
-        <div className="space-y-5">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* Banner */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 text-white">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h2 className="text-xl font-bold mb-1">Bienvenido al panel de control</h2>
-                        <p className="text-blue-200 text-sm">Resumen completo del estado de tu negocio.</p>
-                    </div>
-                    <div className="hidden md:flex items-center gap-3">
-                        {sinStock.length > 0 && (
-                            <div className="bg-white/10 backdrop-blur rounded-xl px-4 py-2.5 border border-white/20">
-                                <p className="text-xs text-blue-200">Sin stock</p>
-                                <p className="text-2xl font-bold">{sinStock.length}</p>
-                            </div>
-                        )}
-                        <div className="bg-white/10 backdrop-blur rounded-xl px-4 py-2.5 border border-white/20">
-                            <p className="text-xs text-blue-200">Valor inventario</p>
-                            <p className="text-2xl font-bold">${valorInventario.toLocaleString()}</p>
+            {/* Welcome banner */}
+            <div style={{
+                background: 'linear-gradient(135deg, #0f1318 0%, #161c26 60%, #1a2635 100%)',
+                borderRadius: 20, padding: '28px 32px',
+                border: '1px solid rgba(255,255,255,0.06)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                flexWrap: 'wrap', gap: 20, position: 'relative', overflow: 'hidden'
+            }}>
+                <div style={{
+                    position: 'absolute', top: -60, right: 80, width: 200, height: 200,
+                    background: 'radial-gradient(circle, rgba(34,197,94,0.15) 0%, transparent 70%)',
+                    borderRadius: '50%', pointerEvents: 'none'
+                }} />
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                    <p style={{ color: '#5a7090', fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                        Panel de Control Administrativo
+                    </p>
+                    <h2 className="font-display" style={{ color: '#fff', fontSize: 26, fontWeight: 800, marginBottom: 6 }}>
+                        Buenos días 👋
+                    </h2>
+                    <p style={{ color: '#5a7090', fontSize: 14 }}>
+                        Aquí está el resumen de tu negocio hoy — {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: '2-digit', month: 'long' })}
+                    </p>
+                </div>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
+                    {sinStock.length > 0 && (
+                        <div style={{
+                            background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)',
+                            borderRadius: 14, padding: '12px 18px', textAlign: 'center'
+                        }}>
+                            <p style={{ color: '#f87171', fontSize: 11, fontWeight: 600 }}>Sin stock</p>
+                            <p className="font-display" style={{ color: '#fff', fontSize: 26, fontWeight: 800 }}>{sinStock.length}</p>
                         </div>
+                    )}
+                    <div style={{
+                        background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)',
+                        borderRadius: 14, padding: '12px 18px', textAlign: 'center'
+                    }}>
+                        <p style={{ color: '#4ade80', fontSize: 11, fontWeight: 600 }}>Total ventas</p>
+                        <p className="font-display" style={{ color: '#fff', fontSize: 22, fontWeight: 800 }}>${totalVentas.toLocaleString()}</p>
                     </div>
                 </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-4 gap-4">
-                <StatCard titulo="Productos registrados" valor={productos.length}
-                    sub="En inventario activo" Icon={IconBox}
-                    colorIcon="text-blue-600" colorBg="bg-blue-50" />
-                <StatCard titulo="Clientes registrados" valor={clientes.length}
-                    sub="Base de clientes" Icon={IconUsers}
-                    colorIcon="text-violet-600" colorBg="bg-violet-50" />
-                <StatCard titulo="Ventas realizadas" valor={ventas.length}
-                    sub="Transacciones totales" Icon={IconCart}
-                    colorIcon="text-emerald-600" colorBg="bg-emerald-50" />
-                <StatCard titulo="Ingresos totales" valor={`$${totalVentas.toLocaleString()}`}
-                    sub="Acumulado histórico" Icon={IconMoney}
-                    colorIcon="text-amber-600" colorBg="bg-amber-50" />
+            <div className="grid-stats">
+                <StatCard
+                    title="Productos en inventario" value={productos.length}
+                    sub="Artículos registrados"
+                    icon={<svg width="20" height="20" fill="none" stroke="#16a34a" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>}
+                    colorClass={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}
+                />
+                <StatCard
+                    title="Clientes registrados" value={clientes.length}
+                    sub="Base de clientes activa"
+                    icon={<svg width="20" height="20" fill="none" stroke="#8b5cf6" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+                    colorClass={{ background: '#f5f3ff', border: '1px solid #ddd6fe' }}
+                />
+                <StatCard
+                    title="Ventas realizadas" value={ventas.length}
+                    sub="Transacciones totales"
+                    icon={<svg width="20" height="20" fill="none" stroke="#0ea5e9" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
+                    colorClass={{ background: '#f0f9ff', border: '1px solid #bae6fd' }}
+                />
+                <StatCard
+                    title="Alertas de stock" value={stockBajo.length}
+                    sub="Productos con stock bajo"
+                    icon={<svg width="20" height="20" fill="none" stroke="#f59e0b" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
+                    colorClass={{ background: '#fffbeb', border: '1px solid #fde68a' }}
+                />
             </div>
 
-            {/* Gráfica ventas por día */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                <div className="flex items-center justify-between mb-5">
+            {/* Charts row 1 */}
+            <div className="card" style={{ padding: '22px 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                     <div>
-                        <h3 className="font-bold text-slate-800">Ingresos últimos 7 días</h3>
-                        <p className="text-xs text-slate-400 mt-0.5">Evolución diaria de ventas</p>
+                        <h3 className="font-display" style={{ fontSize: 16, fontWeight: 700, color: '#1e2736' }}>Ingresos — Últimos 7 días</h3>
+                        <p style={{ fontSize: 12, color: '#8098b8', marginTop: 2 }}>Evolución diaria de ventas</p>
                     </div>
-                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">
-                        Esta semana
-                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '4px 12px', borderRadius: 100 }}>Esta semana</span>
                 </div>
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={dataDia} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis dataKey="dia" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
-                            tickFormatter={v => `$${v.toLocaleString()}`} />
-                        <Tooltip content={<TooltipPersonalizado />} />
-                        <Line type="monotone" dataKey="ingresos" name="ingresos"
-                            stroke="#3b82f6" strokeWidth={2.5} dot={{ fill: '#3b82f6', r: 4 }}
-                            activeDot={{ r: 6, fill: '#2563eb' }} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                        <XAxis dataKey="dia" tick={{ fontSize: 11, fill: '#8098b8' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#8098b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${v.toLocaleString()}`} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Line type="monotone" dataKey="ingresos" name="ingresos" stroke="#16a34a" strokeWidth={2.5}
+                            dot={{ fill: '#16a34a', r: 4, strokeWidth: 0 }} activeDot={{ r: 6, fill: '#16a34a' }} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>
 
-            {/* Gráficas inferiores */}
-            <div className="grid grid-cols-2 gap-4">
-
-                {/* Productos más vendidos */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                    <div className="mb-5">
-                        <h3 className="font-bold text-slate-800">Productos más vendidos</h3>
-                        <p className="text-xs text-slate-400 mt-0.5">Por unidades vendidas</p>
-                    </div>
+            {/* Charts row 2 */}
+            <div className="grid-2">
+                <div className="card" style={{ padding: '22px 24px' }}>
+                    <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, color: '#1e2736', marginBottom: 4 }}>Productos más vendidos</h3>
+                    <p style={{ fontSize: 12, color: '#8098b8', marginBottom: 16 }}>Por unidades vendidas</p>
                     {dataMasVendidos.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10 text-center">
-                            <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center mb-3">
-                                <IconCart />
-                            </div>
-                            <p className="text-sm font-semibold text-slate-400">Sin datos aún</p>
-                            <p className="text-xs text-slate-300 mt-1">Registra ventas para ver estadísticas</p>
+                        <div className="empty-state">
+                            <div className="empty-icon"><svg width="24" height="24" fill="none" stroke="#8098b8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10" /></svg></div>
+                            <p style={{ color: '#8098b8', fontSize: 14, fontWeight: 600 }}>Sin datos de ventas</p>
+                            <p style={{ color: '#a8bcd4', fontSize: 12 }}>Registra ventas para ver estadísticas</p>
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height={200}>
+                        <ResponsiveContainer width="100%" height={180}>
                             <BarChart data={dataMasVendidos} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                <XAxis dataKey="nombre" tick={{ fontSize: 10, fill: '#94a3b8' }}
-                                    axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                                <Tooltip content={<TooltipPersonalizado />} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                                <XAxis dataKey="nombre" tick={{ fontSize: 10, fill: '#8098b8' }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: '#8098b8' }} axisLine={false} tickLine={false} />
+                                <Tooltip content={<CustomTooltip />} />
                                 <Bar dataKey="cantidad" name="Unidades" radius={[6, 6, 0, 0]}>
-                                    {dataMasVendidos.map((_, i) => (
-                                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                                    ))}
+                                    {dataMasVendidos.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
                     )}
                 </div>
 
-                {/* Stock por categoría */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                    <div className="mb-5">
-                        <h3 className="font-bold text-slate-800">Stock por categoría</h3>
-                        <p className="text-xs text-slate-400 mt-0.5">Distribución del inventario</p>
-                    </div>
+                <div className="card" style={{ padding: '22px 24px' }}>
+                    <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, color: '#1e2736', marginBottom: 4 }}>Stock por categoría</h3>
+                    <p style={{ fontSize: 12, color: '#8098b8', marginBottom: 16 }}>Distribución del inventario</p>
                     {dataCategoria.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10 text-center">
-                            <p className="text-sm font-semibold text-slate-400">Sin datos</p>
+                        <div className="empty-state">
+                            <p style={{ color: '#8098b8', fontSize: 14 }}>Sin categorías</p>
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height={200}>
+                        <ResponsiveContainer width="100%" height={180}>
                             <PieChart>
-                                <Pie data={dataCategoria} cx="50%" cy="50%"
-                                    innerRadius={55} outerRadius={80}
-                                    paddingAngle={4} dataKey="value">
-                                    {dataCategoria.map((_, i) => (
-                                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                                    ))}
+                                <Pie data={dataCategoria} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
+                                    {dataCategoria.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                 </Pie>
-                                <Tooltip formatter={(value, name) => [value, name]} />
-                                <Legend iconType="circle" iconSize={8}
-                                    formatter={(value) => (
-                                        <span style={{ fontSize: 11, color: '#64748b' }}>{value}</span>
-                                    )} />
+                                <Tooltip formatter={(v, n) => [v, n]} />
+                                <Legend iconType="circle" iconSize={8} formatter={v => <span style={{ fontSize: 11, color: '#8098b8' }}>{v}</span>} />
                             </PieChart>
                         </ResponsiveContainer>
                     )}
                 </div>
-
             </div>
 
-            {/* Fila alertas y últimas ventas */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Bottom row */}
+            <div className="grid-2">
 
-                {/* Alertas stock */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                    <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 bg-amber-50 rounded-lg flex items-center justify-center text-amber-500">
-                                <IconWarning />
+                {/* Stock alerts */}
+                <div className="card" style={{ overflow: 'hidden' }}>
+                    <div style={{ padding: '18px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 9, background: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="15" height="15" fill="none" stroke="#d97706" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                             </div>
                             <div>
-                                <h3 className="font-semibold text-slate-800 text-sm">Alertas de stock</h3>
-                                <p className="text-xs text-slate-400">Productos que requieren atención</p>
+                                <p style={{ fontSize: 14, fontWeight: 700, color: '#1e2736' }}>Alertas de Stock</p>
+                                <p style={{ fontSize: 11, color: '#8098b8' }}>Productos con poco inventario</p>
                             </div>
                         </div>
-                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${stockBajo.length > 0
-                                ? 'bg-red-50 text-red-600 border border-red-100'
-                                : 'bg-green-50 text-green-600 border border-green-100'
-                            }`}>
+                        <span className={`badge ${stockBajo.length > 0 ? 'badge-red' : 'badge-green'}`}>
                             {stockBajo.length} alertas
                         </span>
                     </div>
-                    <div className="p-4">
+                    <div style={{ padding: '16px' }}>
                         {stockBajo.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center mb-3">
-                                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
+                            <div className="empty-state" style={{ padding: '24px' }}>
+                                <div style={{ width: 44, height: 44, borderRadius: 14, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <svg width="20" height="20" fill="none" stroke="#16a34a" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                 </div>
-                                <p className="text-sm font-semibold text-slate-600">Todo el stock está bien</p>
-                                <p className="text-xs text-slate-400 mt-1">No hay productos con stock bajo</p>
+                                <p style={{ color: '#3d4f66', fontSize: 14, fontWeight: 600 }}>¡Stock saludable!</p>
+                                <p style={{ color: '#8098b8', fontSize: 12 }}>No hay productos con stock bajo</p>
                             </div>
                         ) : (
-                            <div className="space-y-2">
-                                {stockBajo.map(p => (
-                                    <div key={p.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold ${p.stock === 0 ? 'bg-red-500' : 'bg-amber-500'
-                                                }`}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {stockBajo.slice(0, 6).map(p => (
+                                    <div key={p.id} style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        background: '#f4f6f9', borderRadius: 10, padding: '10px 12px'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <div style={{
+                                                width: 32, height: 32, borderRadius: 8,
+                                                background: p.stock === 0 ? '#fee2e2' : '#fef3c7',
+                                                color: p.stock === 0 ? '#dc2626' : '#d97706',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: 13, fontWeight: 700
+                                            }}>
                                                 {p.nombre[0].toUpperCase()}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-semibold text-slate-700">{p.nombre}</p>
-                                                <p className="text-xs text-slate-400">{p.categoria || 'Sin categoría'}</p>
+                                                <p style={{ fontSize: 13, fontWeight: 600, color: '#1e2736' }}>{p.nombre}</p>
+                                                <p style={{ fontSize: 11, color: '#8098b8' }}>{p.categoria || 'Sin categoría'}</p>
                                             </div>
                                         </div>
-                                        <span className={`text-xs font-bold px-2 py-1 rounded-lg ${p.stock === 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                                            }`}>
+                                        <span className={`badge ${p.stock === 0 ? 'badge-red' : 'badge-amber'}`}>
                                             {p.stock === 0 ? 'Sin stock' : `${p.stock} uds`}
                                         </span>
                                     </div>
@@ -364,50 +320,52 @@ function Dashboard() {
                     </div>
                 </div>
 
-                {/* Últimas ventas */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                    <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                {/* Recent sales */}
+                <div className="card" style={{ overflow: 'hidden' }}>
+                    <div style={{ padding: '18px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>
-                            <h3 className="font-semibold text-slate-800 text-sm">Últimas ventas</h3>
-                            <p className="text-xs text-slate-400">Transacciones recientes</p>
+                            <p style={{ fontSize: 14, fontWeight: 700, color: '#1e2736' }}>Últimas Ventas</p>
+                            <p style={{ fontSize: 11, color: '#8098b8' }}>Transacciones recientes</p>
                         </div>
-                        <span className="text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">
-                            {ventas.length} total
-                        </span>
+                        <span className="badge badge-blue">{ventas.length} total</span>
                     </div>
-                    <div className="p-4">
+                    <div style={{ padding: '16px' }}>
                         {ventas.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center mb-3 text-slate-300">
-                                    <IconCart />
+                            <div className="empty-state" style={{ padding: '24px' }}>
+                                <div className="empty-icon">
+                                    <svg width="24" height="24" fill="none" stroke="#8098b8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                                 </div>
-                                <p className="text-sm font-semibold text-slate-600">Sin ventas registradas</p>
-                                <p className="text-xs text-slate-400 mt-1">Las ventas aparecerán aquí</p>
+                                <p style={{ color: '#3d4f66', fontSize: 14, fontWeight: 600 }}>Sin ventas registradas</p>
                             </div>
                         ) : (
-                            <div className="space-y-2">
-                                {ventas.slice(0, 5).map(v => (
-                                    <div key={v.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold ${getColor(v.id)}`}>
-                                                {getInitials(v.clientes?.nombre)}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {ventas.slice(0, 6).map((v, i) => {
+                                    const colors = ['#16a34a', '#0ea5e9', '#8b5cf6', '#f59e0b', '#f43f5e', '#10b981']
+                                    return (
+                                        <div key={v.id} style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                            background: '#f4f6f9', borderRadius: 10, padding: '10px 12px'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <div style={{
+                                                    width: 32, height: 32, borderRadius: 8,
+                                                    background: colors[i % colors.length], color: '#fff',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 12, fontWeight: 700
+                                                }}>
+                                                    {(v.clientes?.nombre?.[0] || 'C').toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1e2736' }}>{v.clientes?.nombre || 'Cliente general'}</p>
+                                                    <p style={{ fontSize: 11, color: '#8098b8' }}>
+                                                        {new Date(v.fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-700">
-                                                    {v.clientes?.nombre || 'Cliente general'}
-                                                </p>
-                                                <p className="text-xs text-slate-400">
-                                                    {new Date(v.fecha).toLocaleDateString('es-CO', {
-                                                        day: '2-digit', month: 'short', year: 'numeric'
-                                                    })}
-                                                </p>
-                                            </div>
+                                            <p style={{ fontSize: 14, fontWeight: 700, color: '#1e2736' }}>${Number(v.total).toLocaleString()}</p>
                                         </div>
-                                        <span className="text-sm font-bold text-slate-800">
-                                            ${Number(v.total).toLocaleString()}
-                                        </span>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         )}
                     </div>

@@ -3,47 +3,24 @@ import axios from 'axios'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
-const IconPlus = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-    </svg>
-)
-const IconEdit = () => (
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-    </svg>
-)
-const IconTrash = () => (
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-    </svg>
-)
-const IconSearch = () => (
-    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-    </svg>
-)
-const IconBox = () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-    </svg>
-)
-const IconX = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-    </svg>
-)
-const IconFilter = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
-    </svg>
-)
-
-function StatMini({ label, valor, color }) {
+function Modal({ open, onClose, children }) {
+    if (!open) return null
     return (
-        <div className={`rounded-xl px-4 py-3 border ${color}`}>
-            <p className="text-xs font-medium opacity-70">{label}</p>
-            <p className="text-xl font-bold mt-0.5">{valor}</p>
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-box" onClick={e => e.stopPropagation()}>{children}</div>
+        </div>
+    )
+}
+
+function StockBar({ stock }) {
+    const pct = Math.min((stock / 100) * 100, 100)
+    const color = stock === 0 ? '#f43f5e' : stock <= 10 ? '#f59e0b' : '#16a34a'
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1, height: 5, background: '#f1f5f9', borderRadius: 100, overflow: 'hidden' }}>
+                <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 100, transition: 'width 0.3s ease' }} />
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 700, color, minWidth: 24, textAlign: 'right' }}>{stock}</span>
         </div>
     )
 }
@@ -77,20 +54,14 @@ function Inventario() {
             setEditando(null)
             setMostrarForm(false)
             cargarProductos()
-        } catch (err) {
+        } catch {
             alert('Error al guardar producto')
         }
         setLoading(false)
     }
 
     const handleEditar = (p) => {
-        setForm({
-            nombre: p.nombre,
-            descripcion: p.descripcion || '',
-            precio: p.precio,
-            stock: p.stock,
-            categoria: p.categoria || ''
-        })
+        setForm({ nombre: p.nombre, descripcion: p.descripcion || '', precio: p.precio, stock: p.stock, categoria: p.categoria || '' })
         setEditando(p.id)
         setMostrarForm(true)
     }
@@ -109,265 +80,219 @@ function Inventario() {
 
     const categorias = [...new Set(productos.map(p => p.categoria).filter(Boolean))]
 
-    const productosFiltrados = productos.filter(p => {
-        const matchBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+    const filtrados = productos.filter(p => {
+        const mb = p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
             (p.categoria && p.categoria.toLowerCase().includes(busqueda.toLowerCase()))
-        const matchCategoria = filtroCategoria === '' || p.categoria === filtroCategoria
-        return matchBusqueda && matchCategoria
+        const mc = filtroCategoria === '' || p.categoria === filtroCategoria
+        return mb && mc
     })
 
     const totalStock = productos.reduce((s, p) => s + p.stock, 0)
-    const stockBajo = productos.filter(p => p.stock <= 10).length
-    const valorInventario = productos.reduce((s, p) => s + p.precio * p.stock, 0)
+    const stockBajo = productos.filter(p => p.stock <= 10 && p.stock > 0).length
+    const sinStock = productos.filter(p => p.stock === 0).length
+    const valorTotal = productos.reduce((s, p) => s + p.precio * p.stock, 0)
 
     return (
-        <div className="space-y-5">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* Estadísticas rápidas */}
-            <div className="grid grid-cols-4 gap-3">
-                <StatMini label="Total productos" valor={productos.length}
-                    color="bg-blue-50 border-blue-100 text-blue-800" />
-                <StatMini label="Unidades en stock" valor={totalStock.toLocaleString()}
-                    color="bg-slate-50 border-slate-200 text-slate-800" />
-                <StatMini label="Stock bajo" valor={stockBajo}
-                    color={stockBajo > 0 ? "bg-red-50 border-red-100 text-red-700" : "bg-green-50 border-green-100 text-green-700"} />
-                <StatMini label="Valor inventario" valor={`$${valorInventario.toLocaleString()}`}
-                    color="bg-emerald-50 border-emerald-100 text-emerald-800" />
+            {/* Stats */}
+            <div className="grid-stats">
+                {[
+                    { label: 'Total productos', val: productos.length, emoji: '📦', bg: '#f0f9ff', border: '#bae6fd', valColor: '#0369a1' },
+                    { label: 'Unidades en stock', val: totalStock.toLocaleString(), emoji: '🗃️', bg: '#f0fdf4', border: '#bbf7d0', valColor: '#15803d' },
+                    { label: 'Stock bajo', val: stockBajo + sinStock, emoji: '⚠️', bg: sinStock > 0 ? '#fff1f2' : '#fffbeb', border: sinStock > 0 ? '#fecdd3' : '#fde68a', valColor: sinStock > 0 ? '#be123c' : '#92400e' },
+                    { label: 'Valor inventario', val: `$${valorTotal.toLocaleString()}`, emoji: '💰', bg: '#f5f3ff', border: '#ddd6fe', valColor: '#7c3aed' },
+                ].map(s => (
+                    <div key={s.label} className="card card-hover" style={{ padding: '18px 20px' }}>
+                        <div style={{ marginBottom: 12 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 10, background: s.bg, border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
+                                {s.emoji}
+                            </div>
+                        </div>
+                        <p className="font-display" style={{ fontSize: 24, fontWeight: 800, color: s.valColor, lineHeight: 1 }}>{s.val}</p>
+                        <p style={{ fontSize: 12, color: '#8098b8', marginTop: 4, fontWeight: 600 }}>{s.label}</p>
+                    </div>
+                ))}
             </div>
 
-            {/* Barra de acciones */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 flex-1">
-                    {/* Buscador */}
-                    <div className="relative flex-1 max-w-xs">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                            <IconSearch />
-                        </div>
-                        <input
-                            className="w-full border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-slate-50"
-                            placeholder="Buscar por nombre o categoría..."
-                            value={busqueda}
-                            onChange={e => setBusqueda(e.target.value)}
-                        />
-                    </div>
-                    {/* Filtro categoría */}
-                    <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2 bg-slate-50">
-                        <IconFilter />
-                        <select
-                            className="text-sm bg-transparent focus:outline-none text-slate-600"
-                            value={filtroCategoria}
-                            onChange={e => setFiltroCategoria(e.target.value)}
-                        >
-                            <option value="">Todas las categorías</option>
-                            {categorias.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                    </div>
+            {/* Toolbar */}
+            <div className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div className="search-bar" style={{ flex: 1, minWidth: 180 }}>
+                    <svg className="search-icon" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                        className="form-input"
+                        style={{ paddingLeft: 38 }}
+                        placeholder="Buscar por nombre o categoría..."
+                        value={busqueda}
+                        onChange={e => setBusqueda(e.target.value)}
+                    />
                 </div>
-
-                {/* Botón nuevo */}
-                <button
-                    onClick={() => { cancelar(); setMostrarForm(true) }}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 font-medium text-sm transition-colors shadow-sm shadow-blue-200"
+                <select
+                    className="form-input"
+                    style={{ width: 'auto', minWidth: 160 }}
+                    value={filtroCategoria}
+                    onChange={e => setFiltroCategoria(e.target.value)}
                 >
-                    <IconPlus />
+                    <option value="">Todas las categorías</option>
+                    {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <button className="btn btn-primary" onClick={() => { cancelar(); setMostrarForm(true) }}>
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
                     Nuevo Producto
                 </button>
             </div>
 
-            {/* Formulario colapsable */}
-            {mostrarForm && (
-                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-5">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-                                <IconBox />
-                            </div>
-                            <div>
-                                <h3 className="font-semibold text-slate-800 text-sm">
-                                    {editando ? 'Editar producto' : 'Registrar nuevo producto'}
-                                </h3>
-                                <p className="text-xs text-slate-400">
-                                    {editando ? 'Modifica los campos y guarda los cambios' : 'Completa la información del producto'}
-                                </p>
-                            </div>
-                        </div>
-                        <button onClick={cancelar} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
-                            <IconX />
-                        </button>
-                    </div>
-
-                    <form onSubmit={handleSubmit}>
-                        <div className="grid grid-cols-3 gap-4 mb-4">
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Nombre *</label>
-                                <input
-                                    className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
-                                    placeholder="Ej: Cuaderno 100 hojas"
-                                    value={form.nombre}
-                                    onChange={e => setForm({ ...form, nombre: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Categoría</label>
-                                <input
-                                    className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
-                                    placeholder="Ej: Papelería"
-                                    value={form.categoria}
-                                    onChange={e => setForm({ ...form, categoria: e.target.value })}
-                                />
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Descripción</label>
-                                <input
-                                    className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
-                                    placeholder="Descripción breve"
-                                    value={form.descripcion}
-                                    onChange={e => setForm({ ...form, descripcion: e.target.value })}
-                                />
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Precio *</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">$</span>
-                                    <input
-                                        className="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
-                                        placeholder="0"
-                                        type="number"
-                                        value={form.precio}
-                                        onChange={e => setForm({ ...form, precio: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Stock inicial *</label>
-                                <input
-                                    className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
-                                    placeholder="0"
-                                    type="number"
-                                    value={form.stock}
-                                    onChange={e => setForm({ ...form, stock: e.target.value })}
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 font-semibold text-sm transition-colors disabled:opacity-50 shadow-sm"
-                            >
-                                {loading ? 'Guardando...' : editando ? 'Guardar cambios' : 'Registrar producto'}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={cancelar}
-                                className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium"
-                            >
-                                Cancelar
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
-
-            {/* Tabla */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            {/* Table */}
+            <div className="card" style={{ overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
-                        <h3 className="font-semibold text-slate-800 text-sm">Listado de productos</h3>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                            Mostrando {productosFiltrados.length} de {productos.length} productos
-                        </p>
+                        <p className="font-display" style={{ fontSize: 15, fontWeight: 700, color: '#1e2736' }}>Catálogo de Productos</p>
+                        <p style={{ fontSize: 12, color: '#8098b8', marginTop: 2 }}>Mostrando {filtrados.length} de {productos.length} productos</p>
                     </div>
+                    {(busqueda || filtroCategoria) && (
+                        <button className="btn btn-secondary btn-sm" onClick={() => { setBusqueda(''); setFiltroCategoria('') }}>
+                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            Limpiar filtros
+                        </button>
+                    )}
                 </div>
 
-                <table className="w-full">
-                    <thead>
-                        <tr className="bg-slate-50 border-b border-slate-100">
-                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Producto</th>
-                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Categoría</th>
-                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Precio</th>
-                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Stock</th>
-                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
-                            <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                        {productosFiltrados.length === 0 ? (
+                <div style={{ overflowX: 'auto' }}>
+                    <table className="data-table">
+                        <thead>
                             <tr>
-                                <td colSpan={6} className="text-center py-12 text-slate-400 text-sm">
-                                    No se encontraron productos
-                                </td>
+                                <th>Producto</th>
+                                <th>Categoría</th>
+                                <th>Precio</th>
+                                <th style={{ minWidth: 140 }}>Stock</th>
+                                <th>Estado</th>
+                                <th style={{ textAlign: 'right' }}>Acciones</th>
                             </tr>
-                        ) : (
-                            productosFiltrados.map(p => (
-                                <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <p className="font-semibold text-slate-800 text-sm">{p.nombre}</p>
-                                        {p.descripcion && (
-                                            <p className="text-xs text-slate-400 mt-0.5">{p.descripcion}</p>
-                                        )}
+                        </thead>
+                        <tbody>
+                            {filtrados.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6}>
+                                        <div className="empty-state">
+                                            <div style={{ fontSize: 28 }}>📦</div>
+                                            <p style={{ fontWeight: 700, color: '#3d4f66', fontSize: 14 }}>No se encontraron productos</p>
+                                            <p style={{ color: '#8098b8', fontSize: 12 }}>{busqueda ? 'Prueba con otro término' : 'Registra el primer producto'}</p>
+                                        </div>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <span className="bg-slate-100 text-slate-600 text-xs font-medium px-2.5 py-1 rounded-lg">
-                                            {p.categoria || 'Sin categoría'}
-                                        </span>
+                                </tr>
+                            ) : filtrados.map(p => (
+                                <tr key={p.id}>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <div style={{
+                                                width: 36, height: 36, borderRadius: 9,
+                                                background: '#f4f6f9', border: '1px solid rgba(0,0,0,0.06)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: 16, flexShrink: 0
+                                            }}>
+                                                📦
+                                            </div>
+                                            <div>
+                                                <p style={{ fontWeight: 700, fontSize: 13, color: '#1e2736' }}>{p.nombre}</p>
+                                                {p.descripcion && <p style={{ fontSize: 11, color: '#8098b8', marginTop: 1 }}>{p.descripcion}</p>}
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <span className="font-bold text-slate-800 text-sm">
-                                            ${Number(p.precio).toLocaleString()}
-                                        </span>
+                                    <td>
+                                        <span className="badge badge-gray">{p.categoria || 'Sin categoría'}</span>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <span className="font-semibold text-slate-700 text-sm">
-                                            {p.stock} <span className="text-slate-400 font-normal">uds</span>
-                                        </span>
+                                    <td>
+                                        <p style={{ fontWeight: 800, fontSize: 14, color: '#1e2736' }}>${Number(p.precio).toLocaleString()}</p>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        {p.stock === 0 ? (
-                                            <span className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 text-xs font-semibold px-2.5 py-1 rounded-lg border border-red-100">
-                                                <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-                                                Sin stock
-                                            </span>
-                                        ) : p.stock <= 10 ? (
-                                            <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-lg border border-amber-100">
-                                                <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
-                                                Stock bajo
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-lg border border-green-100">
-                                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                                                Disponible
-                                            </span>
-                                        )}
+                                    <td style={{ minWidth: 140 }}>
+                                        <StockBar stock={p.stock} />
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <button
-                                                onClick={() => handleEditar(p)}
-                                                className="flex items-center gap-1.5 bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-200 text-xs font-semibold transition-colors"
-                                            >
-                                                <IconEdit />
+                                    <td>
+                                        {p.stock === 0
+                                            ? <span className="badge badge-red">Sin stock</span>
+                                            : p.stock <= 10
+                                                ? <span className="badge badge-amber">Stock bajo</span>
+                                                : <span className="badge badge-green">Disponible</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                                            <button className="btn btn-secondary btn-sm" onClick={() => handleEditar(p)}>
+                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                                 Editar
                                             </button>
-                                            <button
-                                                onClick={() => handleEliminar(p.id)}
-                                                className="flex items-center gap-1.5 bg-red-50 text-red-600 border border-red-100 px-3 py-1.5 rounded-lg hover:bg-red-100 text-xs font-semibold transition-colors"
-                                            >
-                                                <IconTrash />
+                                            <button className="btn btn-danger btn-sm" onClick={() => handleEliminar(p.id)}>
+                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                 Eliminar
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
+            {/* Modal */}
+            <Modal open={mostrarForm} onClose={cancelar}>
+                <div style={{ padding: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#16a34a,#15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="18" height="18" fill="none" stroke="#fff" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                            </div>
+                            <div>
+                                <p className="font-display" style={{ fontSize: 16, fontWeight: 700, color: '#1e2736' }}>
+                                    {editando ? 'Editar Producto' : 'Nuevo Producto'}
+                                </p>
+                                <p style={{ fontSize: 12, color: '#8098b8' }}>
+                                    {editando ? 'Modifica la información del producto' : 'Completa los datos del producto'}
+                                </p>
+                            </div>
+                        </div>
+                        <button className="btn btn-secondary btn-icon" onClick={cancelar}>
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleSubmit}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+                            {[
+                                { key: 'nombre', label: 'Nombre *', placeholder: 'Ej: Cuaderno 100 hojas', type: 'text', required: true, full: false },
+                                { key: 'categoria', label: 'Categoría', placeholder: 'Ej: Papelería', type: 'text', required: false, full: false },
+                                { key: 'descripcion', label: 'Descripción', placeholder: 'Descripción breve', type: 'text', required: false, full: true },
+                            ].map(f => (
+                                <div key={f.key} style={{ gridColumn: f.full ? '1 / -1' : 'auto' }}>
+                                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#8098b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{f.label}</label>
+                                    <input className="form-input" type={f.type} placeholder={f.placeholder} value={form[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} required={f.required} />
+                                </div>
+                            ))}
+                            <div>
+                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#8098b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Precio *</label>
+                                <div style={{ position: 'relative' }}>
+                                    <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#8098b8', fontSize: 14, fontWeight: 600, pointerEvents: 'none' }}>$</span>
+                                    <input className="form-input" style={{ paddingLeft: 24 }} type="number" placeholder="0" value={form.precio} onChange={e => setForm({ ...form, precio: e.target.value })} required />
+                                </div>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#8098b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Stock *</label>
+                                <input className="form-input" type="number" placeholder="0" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} required />
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, paddingTop: 14, borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                            <button type="submit" className="btn btn-primary" disabled={loading} style={{ flex: 1 }}>
+                                {loading ? <><span className="spinner" />Guardando...</> : editando ? 'Guardar Cambios' : 'Registrar Producto'}
+                            </button>
+                            <button type="button" className="btn btn-secondary" onClick={cancelar}>Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </Modal>
         </div>
     )
 }

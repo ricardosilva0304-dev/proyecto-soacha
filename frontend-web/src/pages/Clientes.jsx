@@ -3,77 +3,19 @@ import axios from 'axios'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
-const IconUserPlus = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-    </svg>
-)
-const IconEdit = () => (
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-    </svg>
-)
-const IconTrash = () => (
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-    </svg>
-)
-const IconSearch = () => (
-    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-    </svg>
-)
-const IconX = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-    </svg>
-)
-const IconPhone = () => (
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-    </svg>
-)
-const IconMail = () => (
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-    </svg>
-)
-const IconLocation = () => (
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-)
-const IconUser = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-)
+const COLORS = ['#16a34a', '#0ea5e9', '#8b5cf6', '#f59e0b', '#f43f5e', '#10b981', '#6366f1']
 
 function getInitials(nombre) {
     return nombre.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
 }
 
-function getColor(id) {
-    const colors = [
-        'bg-blue-500', 'bg-violet-500', 'bg-emerald-500',
-        'bg-rose-500', 'bg-amber-500', 'bg-cyan-500', 'bg-indigo-500'
-    ]
-    return colors[id % colors.length]
-}
-
-function StatMini({ label, valor, color }) {
+function Modal({ open, onClose, children }) {
+    if (!open) return null
     return (
-        <div className={`rounded-xl px-4 py-3 border ${color}`}>
-            <p className="text-xs font-medium opacity-70">{label}</p>
-            <p className="text-xl font-bold mt-0.5">{valor}</p>
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-box" onClick={e => e.stopPropagation()}>
+                {children}
+            </div>
         </div>
     )
 }
@@ -106,7 +48,7 @@ function Clientes() {
             setEditando(null)
             setMostrarForm(false)
             cargarClientes()
-        } catch (err) {
+        } catch {
             alert('Error al guardar cliente')
         }
         setLoading(false)
@@ -130,7 +72,7 @@ function Clientes() {
         setForm({ nombre: '', telefono: '', email: '', direccion: '' })
     }
 
-    const clientesFiltrados = clientes.filter(c =>
+    const filtrados = clientes.filter(c =>
         c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
         (c.email && c.email.toLowerCase().includes(busqueda.toLowerCase())) ||
         (c.telefono && c.telefono.includes(busqueda))
@@ -140,222 +82,207 @@ function Clientes() {
     const conTelefono = clientes.filter(c => c.telefono).length
 
     return (
-        <div className="space-y-5">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-3">
-                <StatMini label="Total clientes" valor={clientes.length}
-                    color="bg-blue-50 border-blue-100 text-blue-800" />
-                <StatMini label="Con email" valor={conEmail}
-                    color="bg-slate-50 border-slate-200 text-slate-800" />
-                <StatMini label="Con teléfono" valor={conTelefono}
-                    color="bg-emerald-50 border-emerald-100 text-emerald-800" />
+            <div className="grid-stats">
+                {[
+                    { label: 'Total clientes', val: clientes.length, icon: '👥', bg: '#f0fdf4', border: '#bbf7d0', color: '#15803d' },
+                    { label: 'Con correo', val: conEmail, icon: '📧', bg: '#f0f9ff', border: '#bae6fd', color: '#0369a1' },
+                    { label: 'Con teléfono', val: conTelefono, icon: '📱', bg: '#f5f3ff', border: '#ddd6fe', color: '#7c3aed' },
+                    { label: 'Sin contacto', val: clientes.filter(c => !c.email && !c.telefono).length, icon: '⚠️', bg: '#fffbeb', border: '#fde68a', color: '#92400e' },
+                ].map(s => (
+                    <div key={s.label} className="card card-hover" style={{ padding: '18px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 10, background: s.bg, border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
+                                {s.icon}
+                            </div>
+                        </div>
+                        <p className="font-display" style={{ fontSize: 26, fontWeight: 800, color: '#1e2736' }}>{s.val}</p>
+                        <p style={{ fontSize: 12, color: '#8098b8', marginTop: 2, fontWeight: 600 }}>{s.label}</p>
+                    </div>
+                ))}
             </div>
 
-            {/* Barra de acciones */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex items-center justify-between gap-4">
-                <div className="relative flex-1 max-w-xs">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                        <IconSearch />
-                    </div>
+            {/* Toolbar */}
+            <div className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div className="search-bar" style={{ flex: 1, minWidth: 200 }}>
+                    <svg className="search-icon" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                     <input
-                        className="w-full border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-slate-50"
+                        className="form-input"
+                        style={{ paddingLeft: 38 }}
                         placeholder="Buscar por nombre, email o teléfono..."
                         value={busqueda}
                         onChange={e => setBusqueda(e.target.value)}
                     />
                 </div>
                 <button
+                    className="btn btn-primary"
                     onClick={() => { cancelar(); setMostrarForm(true) }}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 font-medium text-sm transition-colors shadow-sm shadow-blue-200"
                 >
-                    <IconUserPlus />
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
                     Nuevo Cliente
                 </button>
             </div>
 
-            {/* Formulario colapsable */}
-            {mostrarForm && (
-                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-5">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-                                <IconUser />
-                            </div>
-                            <div>
-                                <h3 className="font-semibold text-slate-800 text-sm">
-                                    {editando ? 'Editar cliente' : 'Registrar nuevo cliente'}
-                                </h3>
-                                <p className="text-xs text-slate-400">
-                                    {editando ? 'Modifica los datos y guarda los cambios' : 'Completa la información del cliente'}
-                                </p>
-                            </div>
-                        </div>
-                        <button onClick={cancelar} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
-                            <IconX />
-                        </button>
+            {/* Table */}
+            <div className="card" style={{ overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <p className="font-display" style={{ fontSize: 15, fontWeight: 700, color: '#1e2736' }}>Directorio de Clientes</p>
+                        <p style={{ fontSize: 12, color: '#8098b8', marginTop: 2 }}>
+                            Mostrando {filtrados.length} de {clientes.length} clientes
+                        </p>
                     </div>
-
-                    <form onSubmit={handleSubmit}>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Nombre completo *</label>
-                                <input
-                                    className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
-                                    placeholder="Ej: Carlos Pérez"
-                                    value={form.nombre}
-                                    onChange={e => setForm({ ...form, nombre: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Teléfono</label>
-                                <input
-                                    className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
-                                    placeholder="Ej: 3001234567"
-                                    value={form.telefono}
-                                    onChange={e => setForm({ ...form, telefono: e.target.value })}
-                                />
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Correo electrónico</label>
-                                <input
-                                    className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
-                                    placeholder="correo@ejemplo.com"
-                                    type="email"
-                                    value={form.email}
-                                    onChange={e => setForm({ ...form, email: e.target.value })}
-                                />
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Dirección</label>
-                                <input
-                                    className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
-                                    placeholder="Ej: Calle 13 # 5-20, Soacha"
-                                    value={form.direccion}
-                                    onChange={e => setForm({ ...form, direccion: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 font-semibold text-sm transition-colors disabled:opacity-50 shadow-sm"
-                            >
-                                {loading ? 'Guardando...' : editando ? 'Guardar cambios' : 'Registrar cliente'}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={cancelar}
-                                className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium"
-                            >
-                                Cancelar
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
-
-            {/* Tabla */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100">
-                    <h3 className="font-semibold text-slate-800 text-sm">Listado de clientes</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                        Mostrando {clientesFiltrados.length} de {clientes.length} clientes
-                    </p>
+                    {busqueda && (
+                        <button className="btn btn-secondary btn-sm" onClick={() => setBusqueda('')}>
+                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            Limpiar
+                        </button>
+                    )}
                 </div>
 
-                <table className="w-full">
-                    <thead>
-                        <tr className="bg-slate-50 border-b border-slate-100">
-                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cliente</th>
-                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Teléfono</th>
-                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Correo</th>
-                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Dirección</th>
-                            <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                        {clientesFiltrados.length === 0 ? (
+                <div style={{ overflowX: 'auto' }}>
+                    <table className="data-table">
+                        <thead>
                             <tr>
-                                <td colSpan={5} className="text-center py-12 text-slate-400 text-sm">
-                                    No se encontraron clientes
-                                </td>
+                                <th>Cliente</th>
+                                <th>Teléfono</th>
+                                <th>Correo</th>
+                                <th>Dirección</th>
+                                <th style={{ textAlign: 'right' }}>Acciones</th>
                             </tr>
-                        ) : (
-                            clientesFiltrados.map(c => (
-                                <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
-                                    {/* Cliente con avatar */}
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-8 h-8 ${getColor(c.id)} rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+                        </thead>
+                        <tbody>
+                            {filtrados.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5}>
+                                        <div className="empty-state">
+                                            <div className="empty-icon" style={{ fontSize: 24 }}>👥</div>
+                                            <p style={{ fontWeight: 700, color: '#3d4f66', fontSize: 14 }}>No se encontraron clientes</p>
+                                            <p style={{ color: '#8098b8', fontSize: 12 }}>{busqueda ? 'Prueba con otro término' : 'Registra el primer cliente'}</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : filtrados.map(c => (
+                                <tr key={c.id}>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <div style={{
+                                                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                                                background: COLORS[c.id % COLORS.length],
+                                                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: 13, fontWeight: 700
+                                            }}>
                                                 {getInitials(c.nombre)}
                                             </div>
                                             <div>
-                                                <p className="font-semibold text-slate-800 text-sm">{c.nombre}</p>
-                                                <p className="text-xs text-slate-400">ID #{c.id}</p>
+                                                <p style={{ fontWeight: 700, fontSize: 13, color: '#1e2736' }}>{c.nombre}</p>
+                                                <p style={{ fontSize: 11, color: '#8098b8' }}>ID #{c.id}</p>
                                             </div>
                                         </div>
                                     </td>
-                                    {/* Teléfono */}
-                                    <td className="px-6 py-4">
+                                    <td>
                                         {c.telefono ? (
-                                            <div className="flex items-center gap-1.5 text-slate-600">
-                                                <IconPhone />
-                                                <span className="text-sm">{c.telefono}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#3d4f66', fontSize: 13 }}>
+                                                <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                                {c.telefono}
                                             </div>
-                                        ) : (
-                                            <span className="text-slate-300 text-sm">—</span>
-                                        )}
+                                        ) : <span style={{ color: '#d0dce8', fontSize: 13 }}>—</span>}
                                     </td>
-                                    {/* Email */}
-                                    <td className="px-6 py-4">
+                                    <td>
                                         {c.email ? (
-                                            <div className="flex items-center gap-1.5 text-slate-600">
-                                                <IconMail />
-                                                <span className="text-sm">{c.email}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#3d4f66', fontSize: 13 }}>
+                                                <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                                {c.email}
                                             </div>
-                                        ) : (
-                                            <span className="text-slate-300 text-sm">—</span>
-                                        )}
+                                        ) : <span style={{ color: '#d0dce8', fontSize: 13 }}>—</span>}
                                     </td>
-                                    {/* Dirección */}
-                                    <td className="px-6 py-4">
+                                    <td>
                                         {c.direccion ? (
-                                            <div className="flex items-center gap-1.5 text-slate-600">
-                                                <IconLocation />
-                                                <span className="text-sm truncate max-w-xs">{c.direccion}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#3d4f66', fontSize: 13, maxWidth: 220 }}>
+                                                <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ flexShrink: 0 }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.direccion}</span>
                                             </div>
-                                        ) : (
-                                            <span className="text-slate-300 text-sm">—</span>
-                                        )}
+                                        ) : <span style={{ color: '#d0dce8', fontSize: 13 }}>—</span>}
                                     </td>
-                                    {/* Acciones */}
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <button
-                                                onClick={() => handleEditar(c)}
-                                                className="flex items-center gap-1.5 bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-200 text-xs font-semibold transition-colors"
-                                            >
-                                                <IconEdit />
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                                            <button className="btn btn-secondary btn-sm" onClick={() => handleEditar(c)}>
+                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                                 Editar
                                             </button>
-                                            <button
-                                                onClick={() => handleEliminar(c.id)}
-                                                className="flex items-center gap-1.5 bg-red-50 text-red-600 border border-red-100 px-3 py-1.5 rounded-lg hover:bg-red-100 text-xs font-semibold transition-colors"
-                                            >
-                                                <IconTrash />
+                                            <button className="btn btn-danger btn-sm" onClick={() => handleEliminar(c.id)}>
+                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                 Eliminar
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
+            {/* Modal */}
+            <Modal open={mostrarForm} onClose={cancelar}>
+                <div style={{ padding: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#16a34a,#15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="18" height="18" fill="none" stroke="#fff" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                            </div>
+                            <div>
+                                <p className="font-display" style={{ fontSize: 16, fontWeight: 700, color: '#1e2736' }}>
+                                    {editando ? 'Editar Cliente' : 'Nuevo Cliente'}
+                                </p>
+                                <p style={{ fontSize: 12, color: '#8098b8' }}>
+                                    {editando ? 'Modifica los datos del cliente' : 'Completa la información del cliente'}
+                                </p>
+                            </div>
+                        </div>
+                        <button className="btn btn-secondary btn-icon" onClick={cancelar}>
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleSubmit}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+                            {[
+                                { key: 'nombre', label: 'Nombre completo *', placeholder: 'Ej: Carlos Pérez', type: 'text', required: true },
+                                { key: 'telefono', label: 'Teléfono', placeholder: 'Ej: 3001234567', type: 'text' },
+                                { key: 'email', label: 'Correo electrónico', placeholder: 'correo@ejemplo.com', type: 'email' },
+                                { key: 'direccion', label: 'Dirección', placeholder: 'Calle 13 # 5-20, Soacha', type: 'text' },
+                            ].map(f => (
+                                <div key={f.key}>
+                                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#8098b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
+                                        {f.label}
+                                    </label>
+                                    <input
+                                        className="form-input"
+                                        type={f.type}
+                                        placeholder={f.placeholder}
+                                        value={form[f.key]}
+                                        onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+                                        required={f.required}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, paddingTop: 14, borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                            <button type="submit" className="btn btn-primary" disabled={loading} style={{ flex: 1 }}>
+                                {loading ? <><span className="spinner" />Guardando...</> : editando ? 'Guardar Cambios' : 'Registrar Cliente'}
+                            </button>
+                            <button type="button" className="btn btn-secondary" onClick={cancelar}>Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </Modal>
         </div>
     )
 }
