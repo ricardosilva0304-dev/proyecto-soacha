@@ -14,18 +14,22 @@ function Modal({ open, onClose, children }) {
 
 function StockBar({ stock }) {
     const pct = Math.min((stock / 100) * 100, 100)
-    const color = stock === 0 ? '#f43f5e' : stock <= 10 ? '#f59e0b' : '#16a34a'
+    const color = stock === 0 ? '#ff6b6b' : stock <= 10 ? '#f5c842' : '#c8f560'
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ flex: 1, height: 5, background: '#f1f5f9', borderRadius: 100, overflow: 'hidden' }}>
-                <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 100, transition: 'width 0.3s ease' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <div style={{ flex: 1, height: 4, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 99, transition: 'width 0.4s ease', boxShadow: `0 0 6px ${color}60` }} />
             </div>
-            <span style={{ fontSize: 12, fontWeight: 700, color, minWidth: 24, textAlign: 'right' }}>{stock}</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: stock === 0 ? '#c53030' : stock <= 10 ? '#92400e' : 'var(--ink-40)', minWidth: 26, textAlign: 'right', letterSpacing: '-0.01em' }}>{stock}</span>
         </div>
     )
 }
 
-function Inventario() {
+function FormLabel({ children }) {
+    return <label style={{ display: 'block', fontSize: 10.5, fontWeight: 800, color: 'var(--ink-20)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 7 }}>{children}</label>
+}
+
+export default function Inventario() {
     const [productos, setProductos] = useState([])
     const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' })
     const [editando, setEditando] = useState(null)
@@ -42,75 +46,56 @@ function Inventario() {
     }
 
     const handleSubmit = async (e) => {
-        e.preventDefault()
-        setLoading(true)
+        e.preventDefault(); setLoading(true)
         try {
-            if (editando) {
-                await axios.put(`${API}/productos/${editando}`, form)
-            } else {
-                await axios.post(`${API}/productos`, form)
-            }
+            editando ? await axios.put(`${API}/productos/${editando}`, form) : await axios.post(`${API}/productos`, form)
             setForm({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' })
-            setEditando(null)
-            setMostrarForm(false)
-            cargarProductos()
-        } catch {
-            alert('Error al guardar producto')
-        }
+            setEditando(null); setMostrarForm(false); cargarProductos()
+        } catch { alert('Error al guardar') }
         setLoading(false)
     }
 
     const handleEditar = (p) => {
         setForm({ nombre: p.nombre, descripcion: p.descripcion || '', precio: p.precio, stock: p.stock, categoria: p.categoria || '' })
-        setEditando(p.id)
-        setMostrarForm(true)
+        setEditando(p.id); setMostrarForm(true)
     }
 
     const handleEliminar = async (id) => {
         if (!confirm('¿Eliminar este producto?')) return
-        await axios.delete(`${API}/productos/${id}`)
-        cargarProductos()
+        await axios.delete(`${API}/productos/${id}`); cargarProductos()
     }
 
-    const cancelar = () => {
-        setEditando(null)
-        setMostrarForm(false)
-        setForm({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' })
-    }
+    const cancelar = () => { setEditando(null); setMostrarForm(false); setForm({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' }) }
 
     const categorias = [...new Set(productos.map(p => p.categoria).filter(Boolean))]
-
-    const filtrados = productos.filter(p => {
-        const mb = p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-            (p.categoria && p.categoria.toLowerCase().includes(busqueda.toLowerCase()))
-        const mc = filtroCategoria === '' || p.categoria === filtroCategoria
-        return mb && mc
-    })
+    const filtrados = productos.filter(p =>
+        (p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || (p.categoria && p.categoria.toLowerCase().includes(busqueda.toLowerCase()))) &&
+        (filtroCategoria === '' || p.categoria === filtroCategoria)
+    )
 
     const totalStock = productos.reduce((s, p) => s + p.stock, 0)
+    const valorTotal = productos.reduce((s, p) => s + p.precio * p.stock, 0)
     const stockBajo = productos.filter(p => p.stock <= 10 && p.stock > 0).length
     const sinStock = productos.filter(p => p.stock === 0).length
-    const valorTotal = productos.reduce((s, p) => s + p.precio * p.stock, 0)
+
+    const stats = [
+        { label: 'Total productos', val: productos.length, emoji: '📦', accent: { bg: 'rgba(96,200,245,0.08)', border: 'rgba(96,200,245,0.2)', val: '#0369a1' } },
+        { label: 'Unidades en stock', val: totalStock.toLocaleString(), emoji: '🗃️', accent: { bg: 'rgba(200,245,96,0.08)', border: 'rgba(200,245,96,0.2)', val: '#4a7020' } },
+        { label: 'Stock bajo / sin stock', val: stockBajo + sinStock, emoji: '⚠️', accent: { bg: 'rgba(245,200,66,0.08)', border: 'rgba(245,200,66,0.2)', val: '#92400e' } },
+        { label: 'Valor inventario', val: `$${valorTotal.toLocaleString()}`, emoji: '💰', accent: { bg: 'rgba(167,139,250,0.08)', border: 'rgba(167,139,250,0.2)', val: '#6d28d9' } },
+    ]
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
             {/* Stats */}
             <div className="grid-stats">
-                {[
-                    { label: 'Total productos', val: productos.length, emoji: '📦', bg: '#f0f9ff', border: '#bae6fd', valColor: '#0369a1' },
-                    { label: 'Unidades en stock', val: totalStock.toLocaleString(), emoji: '🗃️', bg: '#f0fdf4', border: '#bbf7d0', valColor: '#15803d' },
-                    { label: 'Stock bajo', val: stockBajo + sinStock, emoji: '⚠️', bg: sinStock > 0 ? '#fff1f2' : '#fffbeb', border: sinStock > 0 ? '#fecdd3' : '#fde68a', valColor: sinStock > 0 ? '#be123c' : '#92400e' },
-                    { label: 'Valor inventario', val: `$${valorTotal.toLocaleString()}`, emoji: '💰', bg: '#f5f3ff', border: '#ddd6fe', valColor: '#7c3aed' },
-                ].map(s => (
-                    <div key={s.label} className="card card-hover" style={{ padding: '18px 20px' }}>
-                        <div style={{ marginBottom: 12 }}>
-                            <div style={{ width: 40, height: 40, borderRadius: 10, background: s.bg, border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-                                {s.emoji}
-                            </div>
-                        </div>
-                        <p className="font-display" style={{ fontSize: 24, fontWeight: 800, color: s.valColor, lineHeight: 1 }}>{s.val}</p>
-                        <p style={{ fontSize: 12, color: '#8098b8', marginTop: 4, fontWeight: 600 }}>{s.label}</p>
+                {stats.map(s => (
+                    <div key={s.label} className="card card-hover" style={{ padding: '20px 22px', background: `linear-gradient(135deg, #fff 60%, ${s.accent.bg})`, border: `1px solid ${s.accent.border}`, position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', top: -15, right: -15, width: 70, height: 70, borderRadius: '50%', background: s.accent.bg, opacity: 0.8 }} />
+                        <div style={{ marginBottom: 14, fontSize: 22 }}>{s.emoji}</div>
+                        <p style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 900, color: s.accent.val, letterSpacing: '-0.04em', lineHeight: 1 }}>{s.val}</p>
+                        <p style={{ fontSize: 12, color: 'var(--ink-30)', marginTop: 5, fontWeight: 600 }}>{s.label}</p>
                     </div>
                 ))}
             </div>
@@ -118,44 +103,29 @@ function Inventario() {
             {/* Toolbar */}
             <div className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <div className="search-bar" style={{ flex: 1, minWidth: 180 }}>
-                    <svg className="search-icon" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input
-                        className="form-input"
-                        style={{ paddingLeft: 38 }}
-                        placeholder="Buscar por nombre o categoría..."
-                        value={busqueda}
-                        onChange={e => setBusqueda(e.target.value)}
-                    />
+                    <svg className="search-icon" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input className="form-input" style={{ paddingLeft: 37 }} placeholder="Buscar por nombre o categoría..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
                 </div>
-                <select
-                    className="form-input"
-                    style={{ width: 'auto', minWidth: 160 }}
-                    value={filtroCategoria}
-                    onChange={e => setFiltroCategoria(e.target.value)}
-                >
+                <select className="form-input" style={{ width: 'auto', minWidth: 170 }} value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value)}>
                     <option value="">Todas las categorías</option>
                     {categorias.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <button className="btn btn-primary" onClick={() => { cancelar(); setMostrarForm(true) }}>
-                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
+                <button className="btn btn-lime" onClick={() => { cancelar(); setMostrarForm(true) }}>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
                     Nuevo Producto
                 </button>
             </div>
 
             {/* Table */}
             <div className="card" style={{ overflow: 'hidden' }}>
-                <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ padding: '16px 22px', borderBottom: '1px solid rgba(8,12,10,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                     <div>
-                        <p className="font-display" style={{ fontSize: 15, fontWeight: 700, color: '#1e2736' }}>Catálogo de Productos</p>
-                        <p style={{ fontSize: 12, color: '#8098b8', marginTop: 2 }}>Mostrando {filtrados.length} de {productos.length} productos</p>
+                        <p style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.03em' }}>Catálogo de Productos</p>
+                        <p style={{ fontSize: 11.5, color: 'var(--ink-20)', marginTop: 2 }}>Mostrando {filtrados.length} de {productos.length} productos</p>
                     </div>
                     {(busqueda || filtroCategoria) && (
                         <button className="btn btn-secondary btn-sm" onClick={() => { setBusqueda(''); setFiltroCategoria('') }}>
-                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                             Limpiar filtros
                         </button>
                     )}
@@ -168,56 +138,38 @@ function Inventario() {
                                 <th>Producto</th>
                                 <th>Categoría</th>
                                 <th>Precio</th>
-                                <th style={{ minWidth: 140 }}>Stock</th>
+                                <th style={{ minWidth: 150 }}>Stock</th>
                                 <th>Estado</th>
                                 <th style={{ textAlign: 'right' }}>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filtrados.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6}>
-                                        <div className="empty-state">
-                                            <div style={{ fontSize: 28 }}>📦</div>
-                                            <p style={{ fontWeight: 700, color: '#3d4f66', fontSize: 14 }}>No se encontraron productos</p>
-                                            <p style={{ color: '#8098b8', fontSize: 12 }}>{busqueda ? 'Prueba con otro término' : 'Registra el primer producto'}</p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <tr><td colSpan={6}>
+                                    <div className="empty-state">
+                                        <span style={{ fontSize: 30 }}>📦</span>
+                                        <p style={{ fontWeight: 800, color: 'var(--ink-40)', fontSize: 14, letterSpacing: '-0.02em' }}>No se encontraron productos</p>
+                                        <p style={{ color: 'var(--ink-20)', fontSize: 12 }}>{busqueda ? 'Prueba con otro término' : 'Registra el primer producto'}</p>
+                                    </div>
+                                </td></tr>
                             ) : filtrados.map(p => (
                                 <tr key={p.id}>
                                     <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            <div style={{
-                                                width: 36, height: 36, borderRadius: 9,
-                                                background: '#f4f6f9', border: '1px solid rgba(0,0,0,0.06)',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: 16, flexShrink: 0
-                                            }}>
-                                                📦
-                                            </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                                            <div style={{ width: 36, height: 36, borderRadius: 9, background: 'var(--surface)', border: '1px solid rgba(8,12,10,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>📦</div>
                                             <div>
-                                                <p style={{ fontWeight: 700, fontSize: 13, color: '#1e2736' }}>{p.nombre}</p>
-                                                {p.descripcion && <p style={{ fontSize: 11, color: '#8098b8', marginTop: 1 }}>{p.descripcion}</p>}
+                                                <p style={{ fontWeight: 800, fontSize: 13.5, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{p.nombre}</p>
+                                                {p.descripcion && <p style={{ fontSize: 11, color: 'var(--ink-20)', marginTop: 1 }}>{p.descripcion}</p>}
                                             </div>
                                         </div>
                                     </td>
+                                    <td><span className="badge badge-gray">{p.categoria || 'Sin categoría'}</span></td>
+                                    <td><p style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 15, color: 'var(--ink)', letterSpacing: '-0.03em' }}>${Number(p.precio).toLocaleString()}</p></td>
+                                    <td style={{ minWidth: 150 }}><StockBar stock={p.stock} /></td>
                                     <td>
-                                        <span className="badge badge-gray">{p.categoria || 'Sin categoría'}</span>
-                                    </td>
-                                    <td>
-                                        <p style={{ fontWeight: 800, fontSize: 14, color: '#1e2736' }}>${Number(p.precio).toLocaleString()}</p>
-                                    </td>
-                                    <td style={{ minWidth: 140 }}>
-                                        <StockBar stock={p.stock} />
-                                    </td>
-                                    <td>
-                                        {p.stock === 0
-                                            ? <span className="badge badge-red">Sin stock</span>
-                                            : p.stock <= 10
-                                                ? <span className="badge badge-amber">Stock bajo</span>
-                                                : <span className="badge badge-green">Disponible</span>
-                                        }
+                                        {p.stock === 0 ? <span className="badge badge-red">Sin stock</span>
+                                            : p.stock <= 10 ? <span className="badge badge-amber">Stock bajo</span>
+                                                : <span className="badge badge-lime">Disponible</span>}
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
@@ -240,53 +192,51 @@ function Inventario() {
 
             {/* Modal */}
             <Modal open={mostrarForm} onClose={cancelar}>
-                <div style={{ padding: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div style={{ padding: '26px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#16a34a,#15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <svg width="18" height="18" fill="none" stroke="#fff" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                            <div style={{ width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(135deg,#c8f560,#a8d940)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="18" height="18" fill="none" stroke="#080c0a" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
                             </div>
                             <div>
-                                <p className="font-display" style={{ fontSize: 16, fontWeight: 700, color: '#1e2736' }}>
-                                    {editando ? 'Editar Producto' : 'Nuevo Producto'}
-                                </p>
-                                <p style={{ fontSize: 12, color: '#8098b8' }}>
-                                    {editando ? 'Modifica la información del producto' : 'Completa los datos del producto'}
-                                </p>
+                                <p style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 900, color: 'var(--ink)', letterSpacing: '-0.03em' }}>{editando ? 'Editar Producto' : 'Nuevo Producto'}</p>
+                                <p style={{ fontSize: 12, color: 'var(--ink-20)' }}>{editando ? 'Modifica la información' : 'Completa los datos del producto'}</p>
                             </div>
                         </div>
                         <button className="btn btn-secondary btn-icon" onClick={cancelar}>
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                     </div>
 
                     <form onSubmit={handleSubmit}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
-                            {[
-                                { key: 'nombre', label: 'Nombre *', placeholder: 'Ej: Cuaderno 100 hojas', type: 'text', required: true, full: false },
-                                { key: 'categoria', label: 'Categoría', placeholder: 'Ej: Papelería', type: 'text', required: false, full: false },
-                                { key: 'descripcion', label: 'Descripción', placeholder: 'Descripción breve', type: 'text', required: false, full: true },
-                            ].map(f => (
-                                <div key={f.key} style={{ gridColumn: f.full ? '1 / -1' : 'auto' }}>
-                                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#8098b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{f.label}</label>
-                                    <input className="form-input" type={f.type} placeholder={f.placeholder} value={form[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} required={f.required} />
-                                </div>
-                            ))}
                             <div>
-                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#8098b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Precio *</label>
+                                <FormLabel>Nombre *</FormLabel>
+                                <input className="form-input" type="text" placeholder="Ej: Cuaderno 100 hojas" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required />
+                            </div>
+                            <div>
+                                <FormLabel>Categoría</FormLabel>
+                                <input className="form-input" type="text" placeholder="Ej: Papelería" value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })} />
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                                <FormLabel>Descripción</FormLabel>
+                                <input className="form-input" type="text" placeholder="Descripción breve del producto" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} />
+                            </div>
+                            <div>
+                                <FormLabel>Precio *</FormLabel>
                                 <div style={{ position: 'relative' }}>
-                                    <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#8098b8', fontSize: 14, fontWeight: 600, pointerEvents: 'none' }}>$</span>
+                                    <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-20)', fontSize: 14, fontWeight: 700 }}>$</span>
                                     <input className="form-input" style={{ paddingLeft: 24 }} type="number" placeholder="0" value={form.precio} onChange={e => setForm({ ...form, precio: e.target.value })} required />
                                 </div>
                             </div>
                             <div>
-                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#8098b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Stock *</label>
+                                <FormLabel>Stock inicial *</FormLabel>
                                 <input className="form-input" type="number" placeholder="0" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} required />
                             </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 10, paddingTop: 14, borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-                            <button type="submit" className="btn btn-primary" disabled={loading} style={{ flex: 1 }}>
-                                {loading ? <><span className="spinner" />Guardando...</> : editando ? 'Guardar Cambios' : 'Registrar Producto'}
+                        <div style={{ display: 'flex', gap: 10, paddingTop: 16, borderTop: '1px solid rgba(8,12,10,0.06)' }}>
+                            <button type="submit" className="btn btn-lime" disabled={loading} style={{ flex: 1 }}>
+                                {loading ? <><span className="spinner spinner-dark" />Guardando...</> : editando ? 'Guardar Cambios' : 'Registrar Producto'}
                             </button>
                             <button type="button" className="btn btn-secondary" onClick={cancelar}>Cancelar</button>
                         </div>
@@ -296,5 +246,3 @@ function Inventario() {
         </div>
     )
 }
-
-export default Inventario

@@ -8,7 +8,7 @@ const routes = {
     '/pos': { title: 'Punto de Venta', sub: 'Registro de ventas' },
 }
 
-function Header({ onMenuClick }) {
+export default function Header({ onMenuClick }) {
     const location = useLocation()
     const [time, setTime] = useState(new Date())
     const info = routes[location.pathname] || { title: 'Panel', sub: '' }
@@ -24,72 +24,67 @@ function Header({ onMenuClick }) {
 
     return (
         <header className="app-header">
-
             {/* Left */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {/* Hamburger (mobile) */}
-                <button
-                    onClick={onMenuClick}
-                    className="btn btn-secondary btn-icon"
-                    style={{ display: 'none' }}
-                    id="menu-btn"
-                >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <button onClick={onMenuClick} id="menu-btn" style={{
+                    display: 'none', width: 34, height: 34, borderRadius: 9, border: '1.5px solid rgba(8,12,10,0.1)',
+                    background: 'var(--surface)', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: 'var(--ink-50)'
+                }}>
                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                 </button>
 
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <h1 className="font-display" style={{ fontSize: 18, fontWeight: 700, color: '#1e2736', lineHeight: 1.2, margin: 0 }}>
+                <div>
+                    <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.03em', lineHeight: 1.15, margin: 0 }}>
                         {info.title}
                     </h1>
-                    <p style={{ fontSize: 12, color: '#8098b8', margin: 0 }}>{info.sub}</p>
+                    <p style={{ fontSize: 11.5, color: 'var(--ink-20)', margin: 0 }}>{info.sub}</p>
                 </div>
             </div>
 
             {/* Right */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
 
-                {/* Date/time */}
+                {/* Clock */}
                 <div style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
-                    padding: '6px 12px', background: '#f4f6f9', borderRadius: 10,
-                    border: '1px solid rgba(0,0,0,0.06)'
+                    padding: '6px 13px', borderRadius: 10,
+                    background: 'var(--surface)', border: '1px solid rgba(8,12,10,0.08)',
+                    textAlign: 'right'
                 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: '#1e2736', lineHeight: 1.2, fontVariantNumeric: 'tabular-nums' }}>
-                        {timeStr}
-                    </span>
-                    <span style={{ fontSize: 11, color: '#8098b8' }}>{cap(dateStr)}</span>
+                    <p style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.2, fontVariantNumeric: 'tabular-nums' }}>{timeStr}</p>
+                    <p style={{ fontSize: 10.5, color: 'var(--ink-20)', textTransform: 'capitalize' }}>{cap(dateStr)}</p>
                 </div>
 
                 {/* Status */}
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '7px 12px', borderRadius: 10,
-                    background: '#f0fdf4', border: '1px solid #bbf7d0'
+                    padding: '6px 12px', borderRadius: 10,
+                    background: 'rgba(200,245,96,0.12)',
+                    border: '1px solid rgba(200,245,96,0.25)',
                 }}>
-                    <span style={{
-                        width: 7, height: 7, borderRadius: '50%', background: '#22c55e',
-                        animation: 'pulse 2s infinite'
-                    }} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: '#15803d' }}>En línea</span>
+                    <span className="pulse-dot" />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#4a7020', letterSpacing: '-0.01em' }}>En línea</span>
                 </div>
 
                 {/* Notifications */}
-                <button className="btn btn-secondary btn-icon" style={{ position: 'relative' }}>
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button style={{
+                    width: 34, height: 34, borderRadius: 9,
+                    border: '1.5px solid rgba(8,12,10,0.09)',
+                    background: 'var(--surface)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', position: 'relative', color: 'var(--ink-40)',
+                    transition: 'all 0.15s'
+                }}>
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
-                    <span style={{
-                        position: 'absolute', top: 7, right: 7,
-                        width: 7, height: 7, borderRadius: '50%',
-                        background: '#16a34a', border: '1.5px solid #fff'
-                    }} />
+                    <span style={{ position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: '50%', background: 'var(--lime)', border: '1.5px solid #fff' }} />
                 </button>
-
             </div>
+
+            <style>{`@media(max-width:1024px){#menu-btn{display:flex!important;}}`}</style>
         </header>
     )
 }
-
-export default Header
