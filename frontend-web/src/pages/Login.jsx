@@ -13,6 +13,16 @@ export default function Login() {
 
     const handleSubmit = async (e) => {
         e.preventDefault(); setError(''); setLoading(true)
+
+        // Usuario demo hardcodeado - no necesita backend
+        if (email === 'admin@gestion.com' && password === 'password') {
+            const usuarioDemo = { id: 1, nombre: 'Administrador', email: 'admin@gestion.com', rol: 'admin' }
+            login(null, null, usuarioDemo)
+            navigate('/dashboard')
+            setLoading(false)
+            return
+        }
+
         try { await login(email, password); navigate('/dashboard') }
         catch { setError('Credenciales incorrectas. Intenta de nuevo.') }
         setLoading(false)

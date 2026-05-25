@@ -18,7 +18,17 @@ export function AuthProvider({ children }) {
         setCargando(false)
     }, [])
 
-    const login = async (email, password) => {
+    const login = async (email, password, usuarioDemo = null) => {
+        // Login demo directo sin backend
+        if (usuarioDemo) {
+            const tokenDemo = 'demo-token-gestion-soacha'
+            localStorage.setItem('token', tokenDemo)
+            localStorage.setItem('usuario', JSON.stringify(usuarioDemo))
+            axios.defaults.headers.common['Authorization'] = `Bearer ${tokenDemo}`
+            setUsuario(usuarioDemo)
+            return
+        }
+
         const { data } = await axios.post(`${API}/auth/login`, { email, password })
         localStorage.setItem('token', data.token)
         localStorage.setItem('usuario', JSON.stringify(data.usuario))
