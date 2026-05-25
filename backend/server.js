@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 8080
 const corsOptions = {
     origin: [
         'https://proyecto-soacha.vercel.app',
+        'https://proyecto-soacha-rmi46mvqe-proyectos-ricardos-projects.vercel.app',
         'http://localhost:5173'
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
