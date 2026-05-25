@@ -15,9 +15,32 @@ export default function POS() {
     const [categoriaActiva, setCategoriaActiva] = useState('Todas')
     const [mostrarCarritoMobile, setMostrarCarritoMobile] = useState(false)
 
+    const DEMO_PRODUCTOS_POS = [
+        { id: 1, nombre: 'Arroz Diana 500g', precio: 3200, stock: 45, categoria: 'Abarrotes' },
+        { id: 2, nombre: 'Aceite 1L', precio: 12000, stock: 8, categoria: 'Abarrotes' },
+        { id: 3, nombre: 'Leche Alpina 1L', precio: 4500, stock: 0, categoria: 'Lácteos' },
+        { id: 4, nombre: 'Pan tajado', precio: 6800, stock: 12, categoria: 'Panadería' },
+        { id: 5, nombre: 'Jabón Rey', precio: 2800, stock: 3, categoria: 'Aseo' },
+        { id: 6, nombre: 'Shampoo H&S', precio: 15000, stock: 20, categoria: 'Aseo' },
+        { id: 7, nombre: 'Pasta dental', precio: 8500, stock: 15, categoria: 'Aseo' },
+        { id: 8, nombre: 'Café Colcafé', precio: 18000, stock: 6, categoria: 'Bebidas' },
+    ]
+
+    const DEMO_CLIENTES_POS = [
+        { id: 1, nombre: 'María García' },
+        { id: 2, nombre: 'Carlos Pérez' },
+        { id: 3, nombre: 'Ana Rodríguez' },
+        { id: 4, nombre: 'Luis Martínez' },
+    ]
+
     useEffect(() => {
-        axios.get(`${API}/productos`).then(r => setProductos(r.data))
-        axios.get(`${API}/clientes`).then(r => setClientes(r.data))
+        axios.get(`${API}/productos`)
+            .then(r => setProductos(r.data))
+            .catch(() => setProductos(DEMO_PRODUCTOS_POS))
+
+        axios.get(`${API}/clientes`)
+            .then(r => setClientes(r.data))
+            .catch(() => setClientes(DEMO_CLIENTES_POS))
     }, [])
 
     const categorias = ['Todas', ...new Set(productos.map(p => p.categoria).filter(Boolean))]

@@ -31,9 +31,21 @@ export default function Clientes() {
 
     useEffect(() => { cargarClientes() }, [])
 
+    const DEMO_CLIENTES = [
+        { id: 1, nombre: 'María García', telefono: '3101234567', email: 'maria@gmail.com', direccion: 'Calle 13 # 5-20, Soacha' },
+        { id: 2, nombre: 'Carlos Pérez', telefono: '3209876543', email: 'carlos@gmail.com', direccion: 'Carrera 7 # 12-40, Soacha' },
+        { id: 3, nombre: 'Ana Rodríguez', telefono: '3156789012', email: 'ana@gmail.com', direccion: 'Calle 8 # 3-15, Soacha' },
+        { id: 4, nombre: 'Luis Martínez', telefono: '3187654321', email: '', direccion: '' },
+        { id: 5, nombre: 'Sandra Torres', telefono: '', email: 'sandra@gmail.com', direccion: 'Av. 3 # 22-10, Soacha' },
+    ]
+
     const cargarClientes = async () => {
-        const { data } = await axios.get(`${API}/clientes`)
-        setClientes(data)
+        try {
+            const { data } = await axios.get(`${API}/clientes`)
+            setClientes(data)
+        } catch {
+            setClientes(DEMO_CLIENTES)
+        }
     }
 
     const handleSubmit = async (e) => {

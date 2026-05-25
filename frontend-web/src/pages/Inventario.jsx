@@ -40,9 +40,24 @@ export default function Inventario() {
 
     useEffect(() => { cargarProductos() }, [])
 
+    const DEMO_PRODUCTOS = [
+        { id: 1, nombre: 'Arroz Diana 500g', descripcion: 'Arroz blanco premium', precio: 3200, stock: 45, categoria: 'Abarrotes' },
+        { id: 2, nombre: 'Aceite 1L', descripcion: 'Aceite vegetal', precio: 12000, stock: 8, categoria: 'Abarrotes' },
+        { id: 3, nombre: 'Leche Alpina 1L', descripcion: 'Leche entera', precio: 4500, stock: 0, categoria: 'Lácteos' },
+        { id: 4, nombre: 'Pan tajado', descripcion: 'Pan blanco tajado', precio: 6800, stock: 12, categoria: 'Panadería' },
+        { id: 5, nombre: 'Jabón Rey', descripcion: 'Jabón de lavar', precio: 2800, stock: 3, categoria: 'Aseo' },
+        { id: 6, nombre: 'Shampoo H&S', descripcion: 'Shampoo anticaspa', precio: 15000, stock: 20, categoria: 'Aseo' },
+        { id: 7, nombre: 'Pasta dental', descripcion: 'Colgate triple acción', precio: 8500, stock: 15, categoria: 'Aseo' },
+        { id: 8, nombre: 'Café Colcafé', descripcion: 'Café soluble 170g', precio: 18000, stock: 6, categoria: 'Bebidas' },
+    ]
+
     const cargarProductos = async () => {
-        const { data } = await axios.get(`${API}/productos`)
-        setProductos(data)
+        try {
+            const { data } = await axios.get(`${API}/productos`)
+            setProductos(data)
+        } catch {
+            setProductos(DEMO_PRODUCTOS)
+        }
     }
 
     const handleSubmit = async (e) => {

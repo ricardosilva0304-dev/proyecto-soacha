@@ -49,6 +49,31 @@ export default function Dashboard() {
     const [ventas, setVentas] = useState([])
     const [loading, setLoading] = useState(true)
 
+    const DEMO_DATA = {
+        productos: [
+            { id: 1, nombre: 'Arroz Diana 500g', categoria: 'Abarrotes', stock: 45, precio: 3200 },
+            { id: 2, nombre: 'Aceite 1L', categoria: 'Abarrotes', stock: 8, precio: 12000 },
+            { id: 3, nombre: 'Leche Alpina 1L', categoria: 'Lácteos', stock: 0, precio: 4500 },
+            { id: 4, nombre: 'Pan tajado', categoria: 'Panadería', stock: 12, precio: 6800 },
+            { id: 5, nombre: 'Jabón Rey', categoria: 'Aseo', stock: 3, precio: 2800 },
+            { id: 6, nombre: 'Shampoo H&S', categoria: 'Aseo', stock: 20, precio: 15000 },
+        ],
+        clientes: [
+            { id: 1, nombre: 'María García', email: 'maria@gmail.com', telefono: '3101234567' },
+            { id: 2, nombre: 'Carlos Pérez', email: 'carlos@gmail.com', telefono: '3209876543' },
+            { id: 3, nombre: 'Ana Rodríguez', email: 'ana@gmail.com', telefono: '3156789012' },
+            { id: 4, nombre: 'Luis Martínez', email: 'luis@gmail.com', telefono: '3187654321' },
+        ],
+        ventas: [
+            { id: 1, total: 45000, fecha: new Date().toISOString(), clientes: { nombre: 'María García' }, detalle_ventas: [{ cantidad: 3, productos: { nombre: 'Arroz Diana 500g' } }] },
+            { id: 2, total: 28000, fecha: new Date(Date.now() - 86400000).toISOString(), clientes: { nombre: 'Carlos Pérez' }, detalle_ventas: [{ cantidad: 2, productos: { nombre: 'Aceite 1L' } }] },
+            { id: 3, total: 67000, fecha: new Date(Date.now() - 172800000).toISOString(), clientes: { nombre: 'Ana Rodríguez' }, detalle_ventas: [{ cantidad: 1, productos: { nombre: 'Shampoo H&S' } }] },
+            { id: 4, total: 15000, fecha: new Date(Date.now() - 259200000).toISOString(), clientes: { nombre: 'Luis Martínez' }, detalle_ventas: [{ cantidad: 5, productos: { nombre: 'Jabón Rey' } }] },
+            { id: 5, total: 52000, fecha: new Date(Date.now() - 345600000).toISOString(), clientes: { nombre: 'María García' }, detalle_ventas: [{ cantidad: 4, productos: { nombre: 'Pan tajado' } }] },
+        ]
+    }
+
+    // Reemplaza el useEffect actual por este:
     useEffect(() => {
         Promise.all([
             axios.get(`${API}/productos`),
@@ -56,7 +81,13 @@ export default function Dashboard() {
             axios.get(`${API}/ventas`)
         ]).then(([p, c, v]) => {
             setProductos(p.data); setClientes(c.data); setVentas(v.data); setLoading(false)
-        }).catch(() => setLoading(false))
+        }).catch(() => {
+            // Si falla el backend, usa datos demo
+            setProductos(DEMO_DATA.productos)
+            setClientes(DEMO_DATA.clientes)
+            setVentas(DEMO_DATA.ventas)
+            setLoading(false)
+        })
     }, [])
 
     const ventasPorDia = () => {
