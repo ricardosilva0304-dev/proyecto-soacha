@@ -15,7 +15,7 @@ router.post('/login', async (req, res) => {
 
     const { data: usuarios, error } = await supabase
         .from('usuarios')
-        .select('*')
+        .select('*') 
         .eq('email', email.toLowerCase())
 
     if (error || !usuarios || usuarios.length === 0)
