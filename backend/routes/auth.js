@@ -13,9 +13,23 @@ router.post('/login', async (req, res) => {
     if (!email || !password)
         return res.status(400).json({ error: 'Email y contraseña requeridos' })
 
+    // Usuario demo hardcodeado
+    if (email === 'admin@gestion.com' && password === 'password') {
+        const token = jwt.sign(
+            { id: 1, email: 'admin@gestion.com', nombre: 'Administrador', rol: 'admin' },
+            JWT_SECRET,
+            { expiresIn: '8h' }
+        )
+        return res.json({
+            token,
+            usuario: { id: 1, nombre: 'Administrador', email: 'admin@gestion.com', rol: 'admin' }
+        })
+    }
+
+    // Login normal con Supabase
     const { data: usuarios, error } = await supabase
         .from('usuarios')
-        .select('*') 
+        .select('*')
         .eq('email', email.toLowerCase())
 
     if (error || !usuarios || usuarios.length === 0)
