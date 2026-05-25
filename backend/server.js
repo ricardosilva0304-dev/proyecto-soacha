@@ -25,6 +25,7 @@ app.options('*', cors(corsOptions))
 app.use(express.json())
 
 app.use('/api/auth', authRouter)
+console.log('Ruta /api/auth registrada')
 app.use('/api/productos', productosRouter)
 app.use('/api/clientes', clientesRouter)
 app.use('/api/ventas', ventasRouter)
