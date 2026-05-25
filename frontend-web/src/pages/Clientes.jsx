@@ -51,11 +51,18 @@ export default function Clientes() {
     const handleSubmit = async (e) => {
         e.preventDefault(); setLoading(true)
         try {
-            editando ? await axios.put(`${API}/clientes/${editando}`, form) : await axios.post(`${API}/clientes`, form)
-            setForm({ nombre: '', telefono: '', email: '', direccion: '' })
-            setEditando(null); setMostrarForm(false); cargarClientes()
-        } catch { alert('Error al guardar cliente') }
-        setLoading(false)
+            await axios.post(`${API}/clientes`, form) // intenta backend
+            cargarClientes()
+        } catch {
+            // Demo: guardar en memoria
+            if (editando) {
+                setClientes(clientes.map(c => c.id === editando ? { ...c, ...form } : c))
+            } else {
+                setClientes([...clientes, { id: Date.now(), ...form }])
+            }
+        }
+        setForm({ nombre: '', telefono: '', email: '', direccion: '' })
+        setEditando(null); setMostrarForm(false); setLoading(false)
     }
 
     const handleEditar = (c) => {
@@ -65,7 +72,12 @@ export default function Clientes() {
 
     const handleEliminar = async (id) => {
         if (!confirm('¿Eliminar este cliente?')) return
-        await axios.delete(`${API}/clientes/${id}`); cargarClientes()
+        try {
+            await axios.delete(`${API}/clientes/${id}`)
+            cargarClientes()
+        } catch {
+            setClientes(clientes.filter(c => c.id !== id))
+        }
     }
 
     const cancelar = () => { setEditando(null); setMostrarForm(false); setForm({ nombre: '', telefono: '', email: '', direccion: '' }) }

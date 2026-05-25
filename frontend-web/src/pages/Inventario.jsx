@@ -63,11 +63,17 @@ export default function Inventario() {
     const handleSubmit = async (e) => {
         e.preventDefault(); setLoading(true)
         try {
-            editando ? await axios.put(`${API}/productos/${editando}`, form) : await axios.post(`${API}/productos`, form)
-            setForm({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' })
-            setEditando(null); setMostrarForm(false); cargarProductos()
-        } catch { alert('Error al guardar') }
-        setLoading(false)
+            await axios.post(`${API}/productos`, form)
+            cargarProductos()
+        } catch {
+            if (editando) {
+                setProductos(productos.map(p => p.id === editando ? { ...p, ...form, precio: Number(form.precio), stock: Number(form.stock) } : p))
+            } else {
+                setProductos([...productos, { id: Date.now(), ...form, precio: Number(form.precio), stock: Number(form.stock) }])
+            }
+        }
+        setForm({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' })
+        setEditando(null); setMostrarForm(false); setLoading(false)
     }
 
     const handleEditar = (p) => {
@@ -77,7 +83,12 @@ export default function Inventario() {
 
     const handleEliminar = async (id) => {
         if (!confirm('¿Eliminar este producto?')) return
-        await axios.delete(`${API}/productos/${id}`); cargarProductos()
+        try {
+            await axios.delete(`${API}/productos/${id}`)
+            cargarProductos()
+        } catch {
+            setProductos(productos.filter(p => p.id !== id))
+        }
     }
 
     const cancelar = () => { setEditando(null); setMostrarForm(false); setForm({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' }) }

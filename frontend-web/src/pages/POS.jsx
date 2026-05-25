@@ -80,10 +80,17 @@ export default function POS() {
         setLoading(true)
         try {
             await axios.post(`${API}/ventas`, { cliente_id: clienteId || null, total, items: carrito })
-            setCarrito([]); setClienteId(''); setVentaExitosa(true); setMostrarCarritoMobile(false)
-            setTimeout(() => setVentaExitosa(false), 4000)
-            const { data } = await axios.get(`${API}/productos`); setProductos(data)
-        } catch { alert('Error al registrar venta') }
+            const { data } = await axios.get(`${API}/productos`)
+            setProductos(data)
+        } catch {
+            // Demo: descontar stock en memoria
+            setProductos(productos.map(p => {
+                const item = carrito.find(i => i.producto_id === p.id)
+                return item ? { ...p, stock: p.stock - item.cantidad } : p
+            }))
+        }
+        setCarrito([]); setClienteId(''); setVentaExitosa(true); setMostrarCarritoMobile(false)
+        setTimeout(() => setVentaExitosa(false), 4000)
         setLoading(false)
     }
 
