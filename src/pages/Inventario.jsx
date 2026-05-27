@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+import { supabase } from '../lib/supabase'
 
 function Modal({ open, onClose, children }) {
     if (!open) return null
@@ -29,6 +27,17 @@ function FormLabel({ children }) {
     return <label style={{ display: 'block', fontSize: 10.5, fontWeight: 800, color: 'var(--ink-20)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 7 }}>{children}</label>
 }
 
+const DEMO_PRODUCTOS = [
+    { id: 1, nombre: 'Arroz Diana 500g', descripcion: 'Arroz blanco premium', precio: 3200, stock: 45, categoria: 'Abarrotes' },
+    { id: 2, nombre: 'Aceite 1L', descripcion: 'Aceite vegetal', precio: 12000, stock: 8, categoria: 'Abarrotes' },
+    { id: 3, nombre: 'Leche Alpina 1L', descripcion: 'Leche entera', precio: 4500, stock: 0, categoria: 'Lácteos' },
+    { id: 4, nombre: 'Pan tajado', descripcion: 'Pan blanco tajado', precio: 6800, stock: 12, categoria: 'Panadería' },
+    { id: 5, nombre: 'Jabón Rey', descripcion: 'Jabón de lavar', precio: 2800, stock: 3, categoria: 'Aseo' },
+    { id: 6, nombre: 'Shampoo H&S', descripcion: 'Shampoo anticaspa', precio: 15000, stock: 20, categoria: 'Aseo' },
+    { id: 7, nombre: 'Pasta dental', descripcion: 'Colgate triple acción', precio: 8500, stock: 15, categoria: 'Aseo' },
+    { id: 8, nombre: 'Café Colcafé', descripcion: 'Café soluble 170g', precio: 18000, stock: 6, categoria: 'Bebidas' },
+]
+
 export default function Inventario() {
     const [productos, setProductos] = useState([])
     const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' })
@@ -37,61 +46,78 @@ export default function Inventario() {
     const [busqueda, setBusqueda] = useState('')
     const [filtroCategoria, setFiltroCategoria] = useState('')
     const [mostrarForm, setMostrarForm] = useState(false)
+    const [esDemo, setEsDemo] = useState(false)
 
     useEffect(() => { cargarProductos() }, [])
 
-    const DEMO_PRODUCTOS = [
-        { id: 1, nombre: 'Arroz Diana 500g', descripcion: 'Arroz blanco premium', precio: 3200, stock: 45, categoria: 'Abarrotes' },
-        { id: 2, nombre: 'Aceite 1L', descripcion: 'Aceite vegetal', precio: 12000, stock: 8, categoria: 'Abarrotes' },
-        { id: 3, nombre: 'Leche Alpina 1L', descripcion: 'Leche entera', precio: 4500, stock: 0, categoria: 'Lácteos' },
-        { id: 4, nombre: 'Pan tajado', descripcion: 'Pan blanco tajado', precio: 6800, stock: 12, categoria: 'Panadería' },
-        { id: 5, nombre: 'Jabón Rey', descripcion: 'Jabón de lavar', precio: 2800, stock: 3, categoria: 'Aseo' },
-        { id: 6, nombre: 'Shampoo H&S', descripcion: 'Shampoo anticaspa', precio: 15000, stock: 20, categoria: 'Aseo' },
-        { id: 7, nombre: 'Pasta dental', descripcion: 'Colgate triple acción', precio: 8500, stock: 15, categoria: 'Aseo' },
-        { id: 8, nombre: 'Café Colcafé', descripcion: 'Café soluble 170g', precio: 18000, stock: 6, categoria: 'Bebidas' },
-    ]
-
     const cargarProductos = async () => {
-        try {
-            const { data } = await axios.get(`${API}/productos`)
-            setProductos(data)
-        } catch {
+        const { data, error } = await supabase
+            .from('productos')
+            .select('*')
+            .order('id', { ascending: true })
+
+        if (error || !data) {
             setProductos(DEMO_PRODUCTOS)
+            setEsDemo(true)
+        } else {
+            setProductos(data)
+            setEsDemo(false)
         }
     }
 
     const handleSubmit = async (e) => {
-        e.preventDefault(); setLoading(true)
-        try {
-            await axios.post(`${API}/productos`, form)
-            cargarProductos()
-        } catch {
-            if (editando) {
-                setProductos(productos.map(p => p.id === editando ? { ...p, ...form, precio: Number(form.precio), stock: Number(form.stock) } : p))
-            } else {
-                setProductos([...productos, { id: Date.now(), ...form, precio: Number(form.precio), stock: Number(form.stock) }])
-            }
+        e.preventDefault()
+        setLoading(true)
+        const payload = {
+            nombre: form.nombre,
+            descripcion: form.descripcion,
+            precio: Number(form.precio),
+            stock: Number(form.stock),
+            categoria: form.categoria,
         }
+
+        if (esDemo) {
+            // Modo demo: solo estado local
+            if (editando) {
+                setProductos(productos.map(p => p.id === editando ? { ...p, ...payload } : p))
+            } else {
+                setProductos([...productos, { id: Date.now(), ...payload }])
+            }
+        } else if (editando) {
+            await supabase.from('productos').update(payload).eq('id', editando)
+            await cargarProductos()
+        } else {
+            await supabase.from('productos').insert([payload])
+            await cargarProductos()
+        }
+
         setForm({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' })
-        setEditando(null); setMostrarForm(false); setLoading(false)
+        setEditando(null)
+        setMostrarForm(false)
+        setLoading(false)
     }
 
     const handleEditar = (p) => {
         setForm({ nombre: p.nombre, descripcion: p.descripcion || '', precio: p.precio, stock: p.stock, categoria: p.categoria || '' })
-        setEditando(p.id); setMostrarForm(true)
+        setEditando(p.id)
+        setMostrarForm(true)
     }
 
     const handleEliminar = async (id) => {
         if (!confirm('¿Eliminar este producto?')) return
-        try {
-            await axios.delete(`${API}/productos/${id}`)
-            cargarProductos()
-        } catch {
+        if (esDemo) {
             setProductos(productos.filter(p => p.id !== id))
+        } else {
+            await supabase.from('productos').delete().eq('id', id)
+            await cargarProductos()
         }
     }
 
-    const cancelar = () => { setEditando(null); setMostrarForm(false); setForm({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' }) }
+    const cancelar = () => {
+        setEditando(null)
+        setMostrarForm(false)
+        setForm({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' })
+    }
 
     const categorias = [...new Set(productos.map(p => p.categoria).filter(Boolean))]
     const filtrados = productos.filter(p =>
@@ -113,6 +139,12 @@ export default function Inventario() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {esDemo && (
+                <div style={{ background: 'rgba(245,200,66,0.1)', border: '1px solid rgba(245,200,66,0.3)', borderRadius: 10, padding: '10px 16px', fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    ⚠️ <strong>Modo demo:</strong> Los cambios no se guardan. Configura tus variables de entorno de Supabase para activar la base de datos.
+                </div>
+            )}
 
             {/* Stats */}
             <div className="grid-stats">

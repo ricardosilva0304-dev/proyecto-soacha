@@ -1,8 +1,25 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import { supabase } from '../lib/supabase'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 const CAT_COLORS = ['#c8f560', '#60c8f5', '#f5c842', '#ff6b6b', '#a78bfa', '#34d399']
+
+const DEMO_PRODUCTOS_POS = [
+    { id: 1, nombre: 'Arroz Diana 500g', precio: 3200, stock: 45, categoria: 'Abarrotes' },
+    { id: 2, nombre: 'Aceite 1L', precio: 12000, stock: 8, categoria: 'Abarrotes' },
+    { id: 3, nombre: 'Leche Alpina 1L', precio: 4500, stock: 0, categoria: 'Lácteos' },
+    { id: 4, nombre: 'Pan tajado', precio: 6800, stock: 12, categoria: 'Panadería' },
+    { id: 5, nombre: 'Jabón Rey', precio: 2800, stock: 3, categoria: 'Aseo' },
+    { id: 6, nombre: 'Shampoo H&S', precio: 15000, stock: 20, categoria: 'Aseo' },
+    { id: 7, nombre: 'Pasta dental', precio: 8500, stock: 15, categoria: 'Aseo' },
+    { id: 8, nombre: 'Café Colcafé', precio: 18000, stock: 6, categoria: 'Bebidas' },
+]
+
+const DEMO_CLIENTES_POS = [
+    { id: 1, nombre: 'María García' },
+    { id: 2, nombre: 'Carlos Pérez' },
+    { id: 3, nombre: 'Ana Rodríguez' },
+    { id: 4, nombre: 'Luis Martínez' },
+]
 
 export default function POS() {
     const [productos, setProductos] = useState([])
@@ -14,33 +31,34 @@ export default function POS() {
     const [busqueda, setBusqueda] = useState('')
     const [categoriaActiva, setCategoriaActiva] = useState('Todas')
     const [mostrarCarritoMobile, setMostrarCarritoMobile] = useState(false)
-
-    const DEMO_PRODUCTOS_POS = [
-        { id: 1, nombre: 'Arroz Diana 500g', precio: 3200, stock: 45, categoria: 'Abarrotes' },
-        { id: 2, nombre: 'Aceite 1L', precio: 12000, stock: 8, categoria: 'Abarrotes' },
-        { id: 3, nombre: 'Leche Alpina 1L', precio: 4500, stock: 0, categoria: 'Lácteos' },
-        { id: 4, nombre: 'Pan tajado', precio: 6800, stock: 12, categoria: 'Panadería' },
-        { id: 5, nombre: 'Jabón Rey', precio: 2800, stock: 3, categoria: 'Aseo' },
-        { id: 6, nombre: 'Shampoo H&S', precio: 15000, stock: 20, categoria: 'Aseo' },
-        { id: 7, nombre: 'Pasta dental', precio: 8500, stock: 15, categoria: 'Aseo' },
-        { id: 8, nombre: 'Café Colcafé', precio: 18000, stock: 6, categoria: 'Bebidas' },
-    ]
-
-    const DEMO_CLIENTES_POS = [
-        { id: 1, nombre: 'María García' },
-        { id: 2, nombre: 'Carlos Pérez' },
-        { id: 3, nombre: 'Ana Rodríguez' },
-        { id: 4, nombre: 'Luis Martínez' },
-    ]
+    const [esDemo, setEsDemo] = useState(false)
 
     useEffect(() => {
-        axios.get(`${API}/productos`)
-            .then(r => setProductos(r.data))
-            .catch(() => setProductos(DEMO_PRODUCTOS_POS))
+        const cargarDatos = async () => {
+            const { data: prods, error: errProds } = await supabase
+                .from('productos')
+                .select('*')
+                .order('id', { ascending: true })
 
-        axios.get(`${API}/clientes`)
-            .then(r => setClientes(r.data))
-            .catch(() => setClientes(DEMO_CLIENTES_POS))
+            const { data: clis, error: errClis } = await supabase
+                .from('clientes')
+                .select('id, nombre')
+                .order('nombre', { ascending: true })
+
+            if (errProds || !prods) {
+                setProductos(DEMO_PRODUCTOS_POS)
+                setEsDemo(true)
+            } else {
+                setProductos(prods)
+            }
+
+            if (errClis || !clis) {
+                setClientes(DEMO_CLIENTES_POS)
+            } else {
+                setClientes(clis)
+            }
+        }
+        cargarDatos()
     }, [])
 
     const categorias = ['Todas', ...new Set(productos.map(p => p.categoria).filter(Boolean))]
@@ -78,18 +96,53 @@ export default function POS() {
     const handleVenta = async () => {
         if (carrito.length === 0) return
         setLoading(true)
-        try {
-            await axios.post(`${API}/ventas`, { cliente_id: clienteId || null, total, items: carrito })
-            const { data } = await axios.get(`${API}/productos`)
-            setProductos(data)
-        } catch {
-            // Demo: descontar stock en memoria
+
+        if (esDemo) {
+            // Modo demo: solo descontar stock en memoria
             setProductos(productos.map(p => {
                 const item = carrito.find(i => i.producto_id === p.id)
                 return item ? { ...p, stock: p.stock - item.cantidad } : p
             }))
+        } else {
+            // 1. Crear la venta
+            const { data: venta, error: ventaError } = await supabase
+                .from('ventas')
+                .insert([{ cliente_id: clienteId || null, total }])
+                .select()
+
+            if (!ventaError && venta) {
+                const venta_id = venta[0].id
+
+                // 2. Insertar detalle de venta
+                const detalles = carrito.map(item => ({
+                    venta_id,
+                    producto_id: item.producto_id,
+                    cantidad: item.cantidad,
+                    precio_unitario: item.precio_unitario,
+                }))
+                await supabase.from('detalle_ventas').insert(detalles)
+
+                // 3. Actualizar stock de cada producto
+                for (const item of carrito) {
+                    const prod = productos.find(p => p.id === item.producto_id)
+                    if (prod) {
+                        await supabase
+                            .from('productos')
+                            .update({ stock: prod.stock - item.cantidad })
+                            .eq('id', item.producto_id)
+                    }
+                }
+
+                // 4. Recargar productos
+                const { data: prods } = await supabase.from('productos').select('*').order('id', { ascending: true })
+                if (prods) setProductos(prods)
+            }
         }
-        setCarrito([]); setClienteId(''); setVentaExitosa(true); setMostrarCarritoMobile(false)
+
+        setCarrito([])
+        setClienteId('')
+        setVentaExitosa(true)
+        setMostrarCarritoMobile(false)
         setTimeout(() => setVentaExitosa(false), 4000)
         setLoading(false)
     }

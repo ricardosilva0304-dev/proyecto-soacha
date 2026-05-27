@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import { supabase } from '../lib/supabase'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 const PALETTE = ['#c8f560', '#60c8f5', '#f5c842', '#ff6b6b', '#a78bfa', '#34d399']
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -73,21 +71,19 @@ export default function Dashboard() {
         ]
     }
 
-    // Reemplaza el useEffect actual por este:
     useEffect(() => {
-        Promise.all([
-            axios.get(`${API}/productos`),
-            axios.get(`${API}/clientes`),
-            axios.get(`${API}/ventas`)
-        ]).then(([p, c, v]) => {
-            setProductos(p.data); setClientes(c.data); setVentas(v.data); setLoading(false)
-        }).catch(() => {
-            // Si falla el backend, usa datos demo
-            setProductos(DEMO_DATA.productos)
-            setClientes(DEMO_DATA.clientes)
-            setVentas(DEMO_DATA.ventas)
+        const cargarDatos = async () => {
+            const [{ data: prods }, { data: clis }, { data: vents }] = await Promise.all([
+                supabase.from('productos').select('*').order('id', { ascending: true }),
+                supabase.from('clientes').select('*').order('id', { ascending: true }),
+                supabase.from('ventas').select('*, clientes(nombre), detalle_ventas(*, productos(nombre))').order('fecha', { ascending: false }),
+            ])
+            setProductos(prods || DEMO_DATA.productos)
+            setClientes(clis || DEMO_DATA.clientes)
+            setVentas(vents || DEMO_DATA.ventas)
             setLoading(false)
-        })
+        }
+        cargarDatos()
     }, [])
 
     const ventasPorDia = () => {

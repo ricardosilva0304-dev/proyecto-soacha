@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import { supabase } from '../lib/supabase'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 const PALETTE = ['#c8f560', '#60c8f5', '#f5c842', '#ff6b6b', '#a78bfa', '#34d399', '#fb923c']
 
 function getInitials(nombre) {
@@ -21,6 +20,14 @@ function FormLabel({ children }) {
     return <label style={{ display: 'block', fontSize: 10.5, fontWeight: 800, color: 'var(--ink-20)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 7 }}>{children}</label>
 }
 
+const DEMO_CLIENTES = [
+    { id: 1, nombre: 'María García', telefono: '3101234567', email: 'maria@gmail.com', direccion: 'Calle 13 # 5-20, Soacha' },
+    { id: 2, nombre: 'Carlos Pérez', telefono: '3209876543', email: 'carlos@gmail.com', direccion: 'Carrera 7 # 12-40, Soacha' },
+    { id: 3, nombre: 'Ana Rodríguez', telefono: '3156789012', email: 'ana@gmail.com', direccion: 'Calle 8 # 3-15, Soacha' },
+    { id: 4, nombre: 'Luis Martínez', telefono: '3187654321', email: '', direccion: '' },
+    { id: 5, nombre: 'Sandra Torres', telefono: '', email: 'sandra@gmail.com', direccion: 'Av. 3 # 22-10, Soacha' },
+]
+
 export default function Clientes() {
     const [clientes, setClientes] = useState([])
     const [form, setForm] = useState({ nombre: '', telefono: '', email: '', direccion: '' })
@@ -28,59 +35,71 @@ export default function Clientes() {
     const [loading, setLoading] = useState(false)
     const [busqueda, setBusqueda] = useState('')
     const [mostrarForm, setMostrarForm] = useState(false)
+    const [esDemo, setEsDemo] = useState(false)
 
     useEffect(() => { cargarClientes() }, [])
 
-    const DEMO_CLIENTES = [
-        { id: 1, nombre: 'María García', telefono: '3101234567', email: 'maria@gmail.com', direccion: 'Calle 13 # 5-20, Soacha' },
-        { id: 2, nombre: 'Carlos Pérez', telefono: '3209876543', email: 'carlos@gmail.com', direccion: 'Carrera 7 # 12-40, Soacha' },
-        { id: 3, nombre: 'Ana Rodríguez', telefono: '3156789012', email: 'ana@gmail.com', direccion: 'Calle 8 # 3-15, Soacha' },
-        { id: 4, nombre: 'Luis Martínez', telefono: '3187654321', email: '', direccion: '' },
-        { id: 5, nombre: 'Sandra Torres', telefono: '', email: 'sandra@gmail.com', direccion: 'Av. 3 # 22-10, Soacha' },
-    ]
-
     const cargarClientes = async () => {
-        try {
-            const { data } = await axios.get(`${API}/clientes`)
-            setClientes(data)
-        } catch {
+        const { data, error } = await supabase
+            .from('clientes')
+            .select('*')
+            .order('id', { ascending: true })
+
+        if (error || !data) {
             setClientes(DEMO_CLIENTES)
+            setEsDemo(true)
+        } else {
+            setClientes(data)
+            setEsDemo(false)
         }
     }
 
     const handleSubmit = async (e) => {
-        e.preventDefault(); setLoading(true)
-        try {
-            await axios.post(`${API}/clientes`, form) // intenta backend
-            cargarClientes()
-        } catch {
-            // Demo: guardar en memoria
+        e.preventDefault()
+        setLoading(true)
+        const payload = { nombre: form.nombre, telefono: form.telefono, email: form.email, direccion: form.direccion }
+
+        if (esDemo) {
             if (editando) {
-                setClientes(clientes.map(c => c.id === editando ? { ...c, ...form } : c))
+                setClientes(clientes.map(c => c.id === editando ? { ...c, ...payload } : c))
             } else {
-                setClientes([...clientes, { id: Date.now(), ...form }])
+                setClientes([...clientes, { id: Date.now(), ...payload }])
             }
+        } else if (editando) {
+            await supabase.from('clientes').update(payload).eq('id', editando)
+            await cargarClientes()
+        } else {
+            await supabase.from('clientes').insert([payload])
+            await cargarClientes()
         }
+
         setForm({ nombre: '', telefono: '', email: '', direccion: '' })
-        setEditando(null); setMostrarForm(false); setLoading(false)
+        setEditando(null)
+        setMostrarForm(false)
+        setLoading(false)
     }
 
     const handleEditar = (c) => {
         setForm({ nombre: c.nombre, telefono: c.telefono || '', email: c.email || '', direccion: c.direccion || '' })
-        setEditando(c.id); setMostrarForm(true)
+        setEditando(c.id)
+        setMostrarForm(true)
     }
 
     const handleEliminar = async (id) => {
         if (!confirm('¿Eliminar este cliente?')) return
-        try {
-            await axios.delete(`${API}/clientes/${id}`)
-            cargarClientes()
-        } catch {
+        if (esDemo) {
             setClientes(clientes.filter(c => c.id !== id))
+        } else {
+            await supabase.from('clientes').delete().eq('id', id)
+            await cargarClientes()
         }
     }
 
-    const cancelar = () => { setEditando(null); setMostrarForm(false); setForm({ nombre: '', telefono: '', email: '', direccion: '' }) }
+    const cancelar = () => {
+        setEditando(null)
+        setMostrarForm(false)
+        setForm({ nombre: '', telefono: '', email: '', direccion: '' })
+    }
 
     const filtrados = clientes.filter(c =>
         c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -97,6 +116,12 @@ export default function Clientes() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {esDemo && (
+                <div style={{ background: 'rgba(245,200,66,0.1)', border: '1px solid rgba(245,200,66,0.3)', borderRadius: 10, padding: '10px 16px', fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    ⚠️ <strong>Modo demo:</strong> Los cambios no se guardan. Configura tus variables de entorno de Supabase.
+                </div>
+            )}
 
             {/* Stats */}
             <div className="grid-stats">
