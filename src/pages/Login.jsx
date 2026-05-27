@@ -95,13 +95,14 @@ export default function Login() {
                         <p style={{ color: 'var(--ink-20)', fontSize: 14 }}>Ingresa tus credenciales para acceder</p>
                     </div>
 
-                    {/* Demo hint */}
+                    {/* Credenciales */}
                     <div style={{ background: 'rgba(200,245,96,0.08)', border: '1px solid rgba(200,245,96,0.15)', borderRadius: 12, padding: '12px 14px', marginBottom: 24 }}>
-                        <p style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--lime)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 7 }}>Acceso Demo</p>
-                        <div style={{ display: 'flex', gap: 20 }}>
-                            <div><p style={{ fontSize: 10.5, color: 'var(--ink-20)' }}>Email</p><p style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--lime)' }}>admin@gestion.com</p></div>
-                            <div><p style={{ fontSize: 10.5, color: 'var(--ink-20)' }}>Contraseña</p><p style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--lime)' }}>password</p></div>
-                        </div>
+                        <p style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--lime)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>
+                            Acceso al sistema
+                        </p>
+                        <p style={{ fontSize: 12, color: 'var(--ink-20)' }}>
+                            Usa las credenciales que registraste en Supabase Auth
+                        </p>
                     </div>
 
                     {/* Error */}
