@@ -162,7 +162,7 @@ export default function Clientes() {
                     )}
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
+                <div className="table-wrapper">
                     <table className="data-table">
                         <thead>
                             <tr>
@@ -257,7 +257,7 @@ export default function Clientes() {
                     </div>
 
                     <form onSubmit={handleSubmit}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
                             {[
                                 { key: 'nombre', label: 'Nombre completo *', placeholder: 'Ej: Carlos Pérez', type: 'text', required: true },
                                 { key: 'telefono', label: 'Teléfono', placeholder: 'Ej: 3001234567', type: 'text' },

@@ -189,7 +189,7 @@ export default function Inventario() {
                     )}
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
+                <div className="table-wrapper">
                     <table className="data-table">
                         <thead>
                             <tr>
@@ -267,7 +267,7 @@ export default function Inventario() {
                     </div>
 
                     <form onSubmit={handleSubmit}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
                             <div>
                                 <FormLabel>Nombre *</FormLabel>
                                 <input className="form-input" type="text" placeholder="Ej: Cuaderno 100 hojas" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required />
