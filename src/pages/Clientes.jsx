@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-const PALETTE = ['#c8f560', '#60c8f5', '#f5c842', '#ff6b6b', '#a78bfa', '#34d399', '#fb923c']
+const PALETTE = ['#c8f560', '#60c8f5', '#f5c842', '#ff6b6b', '#a78bfa', '#34d399']
 
 function getInitials(nombre) {
     return nombre.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
@@ -20,59 +20,43 @@ function FormLabel({ children }) {
     return <label style={{ display: 'block', fontSize: 10.5, fontWeight: 800, color: 'var(--ink-20)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 7 }}>{children}</label>
 }
 
-const DEMO_CLIENTES = [
-    { id: 1, nombre: 'María García', telefono: '3101234567', email: 'maria@gmail.com', direccion: 'Calle 13 # 5-20, Soacha' },
-    { id: 2, nombre: 'Carlos Pérez', telefono: '3209876543', email: 'carlos@gmail.com', direccion: 'Carrera 7 # 12-40, Soacha' },
-    { id: 3, nombre: 'Ana Rodríguez', telefono: '3156789012', email: 'ana@gmail.com', direccion: 'Calle 8 # 3-15, Soacha' },
-    { id: 4, nombre: 'Luis Martínez', telefono: '3187654321', email: '', direccion: '' },
-    { id: 5, nombre: 'Sandra Torres', telefono: '', email: 'sandra@gmail.com', direccion: 'Av. 3 # 22-10, Soacha' },
-]
-
 export default function Clientes() {
     const [clientes, setClientes] = useState([])
     const [form, setForm] = useState({ nombre: '', telefono: '', email: '', direccion: '' })
     const [editando, setEditando] = useState(null)
     const [loading, setLoading] = useState(false)
+    const [cargando, setCargando] = useState(true)
     const [busqueda, setBusqueda] = useState('')
     const [mostrarForm, setMostrarForm] = useState(false)
-    const [esDemo, setEsDemo] = useState(false)
+    const [error, setError] = useState(null)
 
     useEffect(() => { cargarClientes() }, [])
 
     const cargarClientes = async () => {
+        setCargando(true)
+        setError(null)
         const { data, error } = await supabase
             .from('clientes')
             .select('*')
             .order('id', { ascending: true })
-
-        if (error || !data) {
-            setClientes(DEMO_CLIENTES)
-            setEsDemo(true)
-        } else {
-            setClientes(data)
-            setEsDemo(false)
-        }
+        if (error) { setError(error.message); setCargando(false); return }
+        setClientes(data)
+        setCargando(false)
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
+        setError(null)
         const payload = { nombre: form.nombre, telefono: form.telefono, email: form.email, direccion: form.direccion }
-
-        if (esDemo) {
-            if (editando) {
-                setClientes(clientes.map(c => c.id === editando ? { ...c, ...payload } : c))
-            } else {
-                setClientes([...clientes, { id: Date.now(), ...payload }])
-            }
-        } else if (editando) {
-            await supabase.from('clientes').update(payload).eq('id', editando)
-            await cargarClientes()
+        if (editando) {
+            const { error } = await supabase.from('clientes').update(payload).eq('id', editando)
+            if (error) { setError(error.message); setLoading(false); return }
         } else {
-            await supabase.from('clientes').insert([payload])
-            await cargarClientes()
+            const { error } = await supabase.from('clientes').insert([payload])
+            if (error) { setError(error.message); setLoading(false); return }
         }
-
+        await cargarClientes()
         setForm({ nombre: '', telefono: '', email: '', direccion: '' })
         setEditando(null)
         setMostrarForm(false)
@@ -87,18 +71,16 @@ export default function Clientes() {
 
     const handleEliminar = async (id) => {
         if (!confirm('¿Eliminar este cliente?')) return
-        if (esDemo) {
-            setClientes(clientes.filter(c => c.id !== id))
-        } else {
-            await supabase.from('clientes').delete().eq('id', id)
-            await cargarClientes()
-        }
+        const { error } = await supabase.from('clientes').delete().eq('id', id)
+        if (error) { setError(error.message); return }
+        await cargarClientes()
     }
 
     const cancelar = () => {
         setEditando(null)
         setMostrarForm(false)
         setForm({ nombre: '', telefono: '', email: '', direccion: '' })
+        setError(null)
     }
 
     const filtrados = clientes.filter(c =>
@@ -114,16 +96,22 @@ export default function Clientes() {
         { label: 'Sin contacto', val: clientes.filter(c => !c.email && !c.telefono).length, emoji: '⚠️', accent: { bg: 'rgba(245,200,66,0.08)', border: 'rgba(245,200,66,0.2)', val: '#92400e' } },
     ]
 
+    if (cargando) return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', flexDirection: 'column', gap: 16 }}>
+            <div className="spinner spinner-dark" style={{ width: 28, height: 28, borderWidth: 3 }} />
+            <p style={{ color: 'var(--ink-20)', fontSize: 13, fontWeight: 600 }}>Cargando clientes...</p>
+        </div>
+    )
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {esDemo && (
-                <div style={{ background: 'rgba(245,200,66,0.1)', border: '1px solid rgba(245,200,66,0.3)', borderRadius: 10, padding: '10px 16px', fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    ⚠️ <strong>Modo demo:</strong> Los cambios no se guardan. Configura tus variables de entorno de Supabase.
+            {error && (
+                <div style={{ background: '#fff1f1', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: '#c53030', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    ⚠️ {error}
                 </div>
             )}
 
-            {/* Stats */}
             <div className="grid-stats">
                 {stats.map(s => (
                     <div key={s.label} className="card card-hover" style={{ padding: '20px 22px', background: `linear-gradient(135deg, #fff 60%, ${s.accent.bg})`, border: `1px solid ${s.accent.border}`, position: 'relative', overflow: 'hidden' }}>
@@ -135,7 +123,6 @@ export default function Clientes() {
                 ))}
             </div>
 
-            {/* Toolbar */}
             <div className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <div className="search-bar" style={{ flex: 1, minWidth: 200 }}>
                     <svg className="search-icon" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -147,7 +134,6 @@ export default function Clientes() {
                 </button>
             </div>
 
-            {/* Table */}
             <div className="card" style={{ overflow: 'hidden' }}>
                 <div style={{ padding: '16px 22px', borderBottom: '1px solid rgba(8,12,10,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                     <div>
@@ -161,7 +147,6 @@ export default function Clientes() {
                         </button>
                     )}
                 </div>
-
                 <div className="table-wrapper">
                     <table className="data-table">
                         <thead>
@@ -178,7 +163,7 @@ export default function Clientes() {
                                 <tr><td colSpan={5}>
                                     <div className="empty-state">
                                         <span style={{ fontSize: 30 }}>👥</span>
-                                        <p style={{ fontWeight: 800, color: 'var(--ink-40)', fontSize: 14, letterSpacing: '-0.02em' }}>{busqueda ? 'Sin resultados' : 'No hay clientes registrados'}</p>
+                                        <p style={{ fontWeight: 800, color: 'var(--ink-40)', fontSize: 14 }}>{busqueda ? 'Sin resultados' : 'No hay clientes registrados'}</p>
                                         <p style={{ color: 'var(--ink-20)', fontSize: 12 }}>{busqueda ? 'Prueba con otro término' : 'Registra el primer cliente'}</p>
                                     </div>
                                 </td></tr>
@@ -186,7 +171,7 @@ export default function Clientes() {
                                 <tr key={c.id}>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                                            <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: PALETTE[c.id % PALETTE.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#080c0a', letterSpacing: '-0.02em' }}>
+                                            <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: PALETTE[c.id % PALETTE.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#080c0a' }}>
                                                 {getInitials(c.nombre)}
                                             </div>
                                             <div>
@@ -195,30 +180,9 @@ export default function Clientes() {
                                             </div>
                                         </div>
                                     </td>
-                                    <td>
-                                        {c.telefono
-                                            ? <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-50)' }}>
-                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                                                {c.telefono}
-                                            </div>
-                                            : <span style={{ color: 'var(--ink-05)', fontSize: 13 }}>—</span>}
-                                    </td>
-                                    <td>
-                                        {c.email
-                                            ? <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-50)' }}>
-                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                                                {c.email}
-                                            </div>
-                                            : <span style={{ color: 'var(--ink-05)', fontSize: 13 }}>—</span>}
-                                    </td>
-                                    <td>
-                                        {c.direccion
-                                            ? <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-50)', maxWidth: 220 }}>
-                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ flexShrink: 0 }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.direccion}</span>
-                                            </div>
-                                            : <span style={{ color: 'var(--ink-05)', fontSize: 13 }}>—</span>}
-                                    </td>
+                                    <td>{c.telefono ? <span style={{ fontSize: 13, color: 'var(--ink-50)' }}>{c.telefono}</span> : <span style={{ color: 'var(--ink-05)', fontSize: 13 }}>—</span>}</td>
+                                    <td>{c.email ? <span style={{ fontSize: 13, color: 'var(--ink-50)' }}>{c.email}</span> : <span style={{ color: 'var(--ink-05)', fontSize: 13 }}>—</span>}</td>
+                                    <td>{c.direccion ? <span style={{ fontSize: 13, color: 'var(--ink-50)' }}>{c.direccion}</span> : <span style={{ color: 'var(--ink-05)', fontSize: 13 }}>—</span>}</td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
                                             <button className="btn btn-secondary btn-sm" onClick={() => handleEditar(c)}>
@@ -238,7 +202,6 @@ export default function Clientes() {
                 </div>
             </div>
 
-            {/* Modal */}
             <Modal open={mostrarForm} onClose={cancelar}>
                 <div style={{ padding: '26px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
@@ -248,14 +211,13 @@ export default function Clientes() {
                             </div>
                             <div>
                                 <p style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 900, color: 'var(--ink)', letterSpacing: '-0.03em' }}>{editando ? 'Editar Cliente' : 'Nuevo Cliente'}</p>
-                                <p style={{ fontSize: 12, color: 'var(--ink-20)' }}>{editando ? 'Modifica la información' : 'Completa los datos del cliente'}</p>
+                                <p style={{ fontSize: 12, color: 'var(--ink-20)' }}>{editando ? 'Modifica la información' : 'Completa los datos'}</p>
                             </div>
                         </div>
                         <button className="btn btn-secondary btn-icon" onClick={cancelar}>
                             <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                     </div>
-
                     <form onSubmit={handleSubmit}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
                             {[
@@ -270,6 +232,7 @@ export default function Clientes() {
                                 </div>
                             ))}
                         </div>
+                        {error && <p style={{ fontSize: 12, color: '#c53030', marginBottom: 12 }}>⚠️ {error}</p>}
                         <div style={{ display: 'flex', gap: 10, paddingTop: 16, borderTop: '1px solid rgba(8,12,10,0.06)' }}>
                             <button type="submit" className="btn btn-lime" disabled={loading} style={{ flex: 1 }}>
                                 {loading ? <><span className="spinner spinner-dark" />Guardando...</> : editando ? 'Guardar Cambios' : 'Registrar Cliente'}

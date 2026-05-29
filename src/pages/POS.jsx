@@ -3,63 +3,37 @@ import { supabase } from '../lib/supabase'
 
 const CAT_COLORS = ['#c8f560', '#60c8f5', '#f5c842', '#ff6b6b', '#a78bfa', '#34d399']
 
-const DEMO_PRODUCTOS_POS = [
-    { id: 1, nombre: 'Arroz Diana 500g', precio: 3200, stock: 45, categoria: 'Abarrotes' },
-    { id: 2, nombre: 'Aceite 1L', precio: 12000, stock: 8, categoria: 'Abarrotes' },
-    { id: 3, nombre: 'Leche Alpina 1L', precio: 4500, stock: 0, categoria: 'Lácteos' },
-    { id: 4, nombre: 'Pan tajado', precio: 6800, stock: 12, categoria: 'Panadería' },
-    { id: 5, nombre: 'Jabón Rey', precio: 2800, stock: 3, categoria: 'Aseo' },
-    { id: 6, nombre: 'Shampoo H&S', precio: 15000, stock: 20, categoria: 'Aseo' },
-    { id: 7, nombre: 'Pasta dental', precio: 8500, stock: 15, categoria: 'Aseo' },
-    { id: 8, nombre: 'Café Colcafé', precio: 18000, stock: 6, categoria: 'Bebidas' },
-]
-
-const DEMO_CLIENTES_POS = [
-    { id: 1, nombre: 'María García' },
-    { id: 2, nombre: 'Carlos Pérez' },
-    { id: 3, nombre: 'Ana Rodríguez' },
-    { id: 4, nombre: 'Luis Martínez' },
-]
-
 export default function POS() {
     const [productos, setProductos] = useState([])
     const [clientes, setClientes] = useState([])
     const [carrito, setCarrito] = useState([])
     const [clienteId, setClienteId] = useState('')
     const [loading, setLoading] = useState(false)
+    const [cargando, setCargando] = useState(true)
     const [ventaExitosa, setVentaExitosa] = useState(false)
     const [busqueda, setBusqueda] = useState('')
     const [categoriaActiva, setCategoriaActiva] = useState('Todas')
     const [mostrarCarritoMobile, setMostrarCarritoMobile] = useState(false)
-    const [esDemo, setEsDemo] = useState(false)
+    const [error, setError] = useState(null)
 
     useEffect(() => {
         const cargarDatos = async () => {
-            const { data: prods, error: errProds } = await supabase
-                .from('productos')
-                .select('*')
-                .order('id', { ascending: true })
-
-            const { data: clis, error: errClis } = await supabase
-                .from('clientes')
-                .select('id, nombre')
-                .order('nombre', { ascending: true })
-
-            if (errProds || !prods) {
-                setProductos(DEMO_PRODUCTOS_POS)
-                setEsDemo(true)
-            } else {
-                setProductos(prods)
-            }
-
-            if (errClis || !clis) {
-                setClientes(DEMO_CLIENTES_POS)
-            } else {
-                setClientes(clis)
-            }
+            const [{ data: prods, error: e1 }, { data: clis, error: e2 }] = await Promise.all([
+                supabase.from('productos').select('*').order('nombre', { ascending: true }),
+                supabase.from('clientes').select('id, nombre').order('nombre', { ascending: true }),
+            ])
+            if (e1) { setError(e1.message); setCargando(false); return }
+            setProductos(prods || [])
+            setClientes(clis || [])
+            setCargando(false)
         }
         cargarDatos()
     }, [])
+
+    const recargarProductos = async () => {
+        const { data } = await supabase.from('productos').select('*').order('nombre', { ascending: true })
+        if (data) setProductos(data)
+    }
 
     const categorias = ['Todas', ...new Set(productos.map(p => p.categoria).filter(Boolean))]
     const filtrados = productos.filter(p =>
@@ -74,7 +48,14 @@ export default function POS() {
             if (existe.cantidad >= producto.stock) return
             setCarrito(carrito.map(i => i.producto_id === producto.id ? { ...i, cantidad: i.cantidad + 1 } : i))
         } else {
-            setCarrito([...carrito, { producto_id: producto.id, nombre: producto.nombre, precio_unitario: Number(producto.precio), cantidad: 1, stock: producto.stock, categoria: producto.categoria }])
+            setCarrito([...carrito, {
+                producto_id: producto.id,
+                nombre: producto.nombre,
+                precio_unitario: Number(producto.precio),
+                cantidad: 1,
+                stock: producto.stock,
+                categoria: producto.categoria
+            }])
         }
     }
 
@@ -96,49 +77,41 @@ export default function POS() {
     const handleVenta = async () => {
         if (carrito.length === 0) return
         setLoading(true)
+        setError(null)
 
-        if (esDemo) {
-            // Modo demo: solo descontar stock en memoria
-            setProductos(productos.map(p => {
-                const item = carrito.find(i => i.producto_id === p.id)
-                return item ? { ...p, stock: p.stock - item.cantidad } : p
-            }))
-        } else {
-            // 1. Crear la venta
-            const { data: venta, error: ventaError } = await supabase
-                .from('ventas')
-                .insert([{ cliente_id: clienteId || null, total }])
-                .select()
+        // 1. Crear venta
+        const { data: venta, error: e1 } = await supabase
+            .from('ventas')
+            .insert([{ cliente_id: clienteId || null, total }])
+            .select()
 
-            if (!ventaError && venta) {
-                const venta_id = venta[0].id
+        if (e1 || !venta) { setError(e1?.message || 'Error al registrar la venta'); setLoading(false); return }
 
-                // 2. Insertar detalle de venta
-                const detalles = carrito.map(item => ({
-                    venta_id,
-                    producto_id: item.producto_id,
-                    cantidad: item.cantidad,
-                    precio_unitario: item.precio_unitario,
-                }))
-                await supabase.from('detalle_ventas').insert(detalles)
+        const venta_id = venta[0].id
 
-                // 3. Actualizar stock de cada producto
-                for (const item of carrito) {
-                    const prod = productos.find(p => p.id === item.producto_id)
-                    if (prod) {
-                        await supabase
-                            .from('productos')
-                            .update({ stock: prod.stock - item.cantidad })
-                            .eq('id', item.producto_id)
-                    }
-                }
+        // 2. Insertar detalles
+        const detalles = carrito.map(item => ({
+            venta_id,
+            producto_id: item.producto_id,
+            cantidad: item.cantidad,
+            precio_unitario: item.precio_unitario,
+        }))
+        const { error: e2 } = await supabase.from('detalle_ventas').insert(detalles)
+        if (e2) { setError(e2.message); setLoading(false); return }
 
-                // 4. Recargar productos
-                const { data: prods } = await supabase.from('productos').select('*').order('id', { ascending: true })
-                if (prods) setProductos(prods)
+        // 3. Actualizar stock de cada producto
+        for (const item of carrito) {
+            const prod = productos.find(p => p.id === item.producto_id)
+            if (prod) {
+                await supabase
+                    .from('productos')
+                    .update({ stock: prod.stock - item.cantidad })
+                    .eq('id', item.producto_id)
             }
         }
 
+        // 4. Recargar productos y limpiar
+        await recargarProductos()
         setCarrito([])
         setClienteId('')
         setVentaExitosa(true)
@@ -150,16 +123,21 @@ export default function POS() {
     const PanelCarrito = () => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
 
-            {/* Toast éxito */}
             {ventaExitosa && (
-                <div style={{ background: 'var(--ink)', border: '1px solid rgba(200,245,96,0.3)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, animation: 'scaleIn 0.22s ease' }}>
+                <div style={{ background: 'var(--ink)', border: '1px solid rgba(200,245,96,0.3)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(200,245,96,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <svg width="17" height="17" fill="none" stroke="#c8f560" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                     </div>
                     <div>
-                        <p style={{ color: '#fff', fontWeight: 800, fontSize: 13, letterSpacing: '-0.02em' }}>¡Venta registrada!</p>
+                        <p style={{ color: '#fff', fontWeight: 800, fontSize: 13 }}>¡Venta registrada!</p>
                         <p style={{ color: 'var(--ink-20)', fontSize: 11, marginTop: 2 }}>Transacción completada</p>
                     </div>
+                </div>
+            )}
+
+            {error && (
+                <div style={{ background: '#fff1f1', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#c53030' }}>
+                    ⚠️ {error}
                 </div>
             )}
 
@@ -176,13 +154,13 @@ export default function POS() {
                         </div>
                     </div>
                     {carrito.length > 0 && (
-                        <button onClick={() => setCarrito([])} style={{ fontSize: 11, fontWeight: 800, color: '#c53030', background: '#fff1f1', border: '1px solid #fecaca', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', letterSpacing: '-0.01em' }}>
+                        <button onClick={() => setCarrito([])} style={{ fontSize: 11, fontWeight: 800, color: '#c53030', background: '#fff1f1', border: '1px solid #fecaca', borderRadius: 7, padding: '4px 10px', cursor: 'pointer' }}>
                             Limpiar
                         </button>
                     )}
                 </div>
 
-                {/* Cliente */}
+                {/* Selector cliente */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface)', borderRadius: 10, padding: '8px 12px', border: '1.5px solid rgba(8,12,10,0.08)' }}>
                     <svg width="13" height="13" fill="none" stroke="var(--ink-20)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     <select style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: 'var(--ink-50)', fontFamily: 'var(--font-body)', fontWeight: 600 }} value={clienteId} onChange={e => setClienteId(e.target.value)}>
@@ -196,8 +174,8 @@ export default function POS() {
             <div className="card" style={{ flex: 1, padding: '12px', minHeight: 0, overflow: 'hidden' }}>
                 {carrito.length === 0 ? (
                     <div className="empty-state" style={{ padding: '36px 16px' }}>
-                        <div style={{ fontSize: 34, animation: 'float 3s ease-in-out infinite' }}>🛒</div>
-                        <p style={{ fontWeight: 800, color: 'var(--ink-30)', fontSize: 13, letterSpacing: '-0.02em' }}>Carrito vacío</p>
+                        <div style={{ fontSize: 34 }}>🛒</div>
+                        <p style={{ fontWeight: 800, color: 'var(--ink-30)', fontSize: 13 }}>Carrito vacío</p>
                         <p style={{ color: 'var(--ink-20)', fontSize: 11 }}>Selecciona productos del catálogo</p>
                     </div>
                 ) : (
@@ -206,10 +184,10 @@ export default function POS() {
                             <div key={item.producto_id} style={{ background: 'var(--surface)', borderRadius: 12, padding: '11px 13px' }}>
                                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 9 }}>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <p style={{ fontWeight: 800, fontSize: 13, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.02em' }}>{item.nombre}</p>
+                                        <p style={{ fontWeight: 800, fontSize: 13, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.nombre}</p>
                                         <p style={{ fontSize: 11, color: 'var(--ink-20)', marginTop: 2 }}>${Number(item.precio_unitario).toLocaleString()} c/u</p>
                                     </div>
-                                    <button onClick={() => quitarItem(item.producto_id)} style={{ background: 'none', border: 'none', color: 'var(--ink-05)', cursor: 'pointer', padding: '2px 4px', transition: 'color 0.12s', flexShrink: 0 }}
+                                    <button onClick={() => quitarItem(item.producto_id)} style={{ background: 'none', border: 'none', color: 'var(--ink-05)', cursor: 'pointer', padding: '2px 4px', flexShrink: 0 }}
                                         onMouseEnter={e => e.target.style.color = '#ff6b6b'}
                                         onMouseLeave={e => e.target.style.color = 'var(--ink-05)'}>
                                         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -217,15 +195,11 @@ export default function POS() {
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                                        <button onClick={() => cambiarCantidad(item.producto_id, -1)} style={{ width: 26, height: 26, borderRadius: 7, background: '#fff', border: '1.5px solid rgba(8,12,10,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.12s' }}
-                                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--ink-30)'}
-                                            onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(8,12,10,0.1)'}>
+                                        <button onClick={() => cambiarCantidad(item.producto_id, -1)} style={{ width: 26, height: 26, borderRadius: 7, background: '#fff', border: '1.5px solid rgba(8,12,10,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                                             <svg width="11" height="11" fill="none" stroke="var(--ink-50)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 12H4" /></svg>
                                         </button>
-                                        <span style={{ fontSize: 14, fontWeight: 900, color: 'var(--ink)', minWidth: 18, textAlign: 'center', letterSpacing: '-0.02em' }}>{item.cantidad}</span>
-                                        <button onClick={() => cambiarCantidad(item.producto_id, 1)} style={{ width: 26, height: 26, borderRadius: 7, background: '#c8f560', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.12s' }}
-                                            onMouseEnter={e => e.currentTarget.style.background = '#a8d940'}
-                                            onMouseLeave={e => e.currentTarget.style.background = '#c8f560'}>
+                                        <span style={{ fontSize: 14, fontWeight: 900, color: 'var(--ink)', minWidth: 18, textAlign: 'center' }}>{item.cantidad}</span>
+                                        <button onClick={() => cambiarCantidad(item.producto_id, 1)} style={{ width: 26, height: 26, borderRadius: 7, background: '#c8f560', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                                             <svg width="11" height="11" fill="none" stroke="#080c0a" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
                                         </button>
                                     </div>
@@ -260,10 +234,18 @@ export default function POS() {
                     boxShadow: carrito.length > 0 ? '0 6px 24px rgba(200,245,96,0.4)' : 'none',
                     transition: 'all 0.18s'
                 }}>
-                    {loading ? <><span className="spinner spinner-dark" />Procesando...</>
+                    {loading
+                        ? <><span className="spinner spinner-dark" />Procesando...</>
                         : <><svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>Registrar Venta</>}
                 </button>
             </div>
+        </div>
+    )
+
+    if (cargando) return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', flexDirection: 'column', gap: 16 }}>
+            <div className="spinner spinner-dark" style={{ width: 28, height: 28, borderWidth: 3 }} />
+            <p style={{ color: 'var(--ink-20)', fontSize: 13, fontWeight: 600 }}>Cargando productos...</p>
         </div>
     )
 
@@ -274,11 +256,10 @@ export default function POS() {
             <div className="mobile-cart-fab">
                 <button onClick={() => setMostrarCarritoMobile(true)} style={{
                     position: 'fixed', bottom: 22, right: 22, zIndex: 60,
-                    background: '#c8f560', color: '#080c0a',
-                    border: 'none', borderRadius: 16, padding: '12px 20px',
+                    background: '#c8f560', color: '#080c0a', border: 'none', borderRadius: 16, padding: '12px 20px',
                     display: 'flex', alignItems: 'center', gap: 10,
                     boxShadow: '0 8px 28px rgba(200,245,96,0.5)', cursor: 'pointer',
-                    fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 14, letterSpacing: '-0.02em'
+                    fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 14
                 }}>
                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                     Carrito
@@ -303,13 +284,12 @@ export default function POS() {
                 </div>
             )}
 
-            {/* Main layout */}
+            {/* Layout principal */}
             <div style={{ display: 'flex', gap: 16 }} className="pos-container">
 
-                {/* Left: productos */}
+                {/* Productos */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
 
-                    {/* Búsqueda + categorías */}
                     <div className="card" style={{ padding: '14px 16px' }}>
                         <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
                             <div className="search-bar" style={{ flex: 1 }}>
@@ -318,7 +298,7 @@ export default function POS() {
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', borderRadius: 10, padding: '0 13px', border: '1.5px solid rgba(8,12,10,0.08)', flexShrink: 0 }}>
                                 <svg width="13" height="13" fill="none" stroke="var(--ink-20)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-                                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--ink-40)', letterSpacing: '-0.01em' }}>{filtrados.length}</span>
+                                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--ink-40)' }}>{filtrados.length}</span>
                             </div>
                         </div>
                         <div className="tabs-scroll">
@@ -331,7 +311,6 @@ export default function POS() {
                         </div>
                     </div>
 
-                    {/* Grid productos */}
                     <div className="card" style={{ padding: '16px', flex: 1 }}>
                         {filtrados.length === 0 ? (
                             <div className="empty-state">
@@ -352,25 +331,17 @@ export default function POS() {
                                             opacity: agotado ? 0.5 : 1,
                                             transition: 'all 0.15s ease',
                                             boxShadow: enCarrito ? '0 4px 16px rgba(200,245,96,0.25)' : 'var(--shadow-sm)',
-                                        }}
-                                            onMouseEnter={e => { if (!agotado && !enCarrito) { e.currentTarget.style.border = '2px solid rgba(200,245,96,0.5)'; e.currentTarget.style.background = 'rgba(200,245,96,0.05)' } }}
-                                            onMouseLeave={e => { if (!agotado && !enCarrito) { e.currentTarget.style.border = '2px solid rgba(8,12,10,0.08)'; e.currentTarget.style.background = '#fff' } }}
-                                        >
+                                        }}>
                                             {enCarrito && (
                                                 <div style={{ position: 'absolute', top: 9, right: 9, width: 21, height: 21, borderRadius: '50%', background: '#c8f560', color: '#080c0a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900 }}>
                                                     {enCarrito.cantidad}
                                                 </div>
                                             )}
-                                            <p style={{ fontSize: 10, color: enCarrito ? '#4a7020' : 'var(--ink-20)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>
-                                                {p.categoria || 'General'}
-                                            </p>
-                                            <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--ink)', lineHeight: 1.3, marginBottom: 9, letterSpacing: '-0.02em' }}>{p.nombre}</p>
-                                            <p style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 900, color: enCarrito ? '#4a7020' : 'var(--ink)', marginBottom: 8, letterSpacing: '-0.04em' }}>
-                                                ${Number(p.precio).toLocaleString()}
-                                            </p>
+                                            <p style={{ fontSize: 10, color: enCarrito ? '#4a7020' : 'var(--ink-20)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>{p.categoria || 'General'}</p>
+                                            <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--ink)', lineHeight: 1.3, marginBottom: 9 }}>{p.nombre}</p>
+                                            <p style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 900, color: enCarrito ? '#4a7020' : 'var(--ink)', marginBottom: 8, letterSpacing: '-0.04em' }}>${Number(p.precio).toLocaleString()}</p>
                                             <span style={{
-                                                display: 'inline-flex', alignItems: 'center', gap: 4,
-                                                fontSize: 10.5, fontWeight: 800, padding: '3px 9px', borderRadius: 99,
+                                                display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 800, padding: '3px 9px', borderRadius: 99,
                                                 background: agotado ? '#fff1f1' : p.stock <= 10 ? '#fffbeb' : 'rgba(200,245,96,0.12)',
                                                 color: agotado ? '#c53030' : p.stock <= 10 ? '#92400e' : '#4a7020',
                                                 border: `1px solid ${agotado ? '#fecaca' : p.stock <= 10 ? '#fde68a' : 'rgba(200,245,96,0.3)'}`,
@@ -385,20 +356,19 @@ export default function POS() {
                     </div>
                 </div>
 
-                {/* Right: carrito desktop */}
+                {/* Carrito desktop */}
                 <div className="pos-sidebar-desktop" style={{ width: 330, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
                     <PanelCarrito />
                 </div>
             </div>
 
             <style>{`
-        @media (max-width: 1024px) {
-          .pos-sidebar-desktop { display: none !important; }
-          .mobile-cart-fab { display: block !important; }
-          .pos-container { flex-direction: column !important; }
-        }
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-      `}</style>
+                @media (max-width: 1024px) {
+                    .pos-sidebar-desktop { display: none !important; }
+                    .mobile-cart-fab { display: block !important; }
+                    .pos-container { flex-direction: column !important; }
+                }
+            `}</style>
         </div>
     )
 }

@@ -18,7 +18,7 @@ function StockBar({ stock }) {
             <div style={{ flex: 1, height: 4, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden' }}>
                 <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 99, transition: 'width 0.4s ease', boxShadow: `0 0 6px ${color}60` }} />
             </div>
-            <span style={{ fontSize: 12, fontWeight: 800, color: stock === 0 ? '#c53030' : stock <= 10 ? '#92400e' : 'var(--ink-40)', minWidth: 26, textAlign: 'right', letterSpacing: '-0.01em' }}>{stock}</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: stock === 0 ? '#c53030' : stock <= 10 ? '#92400e' : 'var(--ink-40)', minWidth: 26, textAlign: 'right' }}>{stock}</span>
         </div>
     )
 }
@@ -27,47 +27,35 @@ function FormLabel({ children }) {
     return <label style={{ display: 'block', fontSize: 10.5, fontWeight: 800, color: 'var(--ink-20)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 7 }}>{children}</label>
 }
 
-const DEMO_PRODUCTOS = [
-    { id: 1, nombre: 'Arroz Diana 500g', descripcion: 'Arroz blanco premium', precio: 3200, stock: 45, categoria: 'Abarrotes' },
-    { id: 2, nombre: 'Aceite 1L', descripcion: 'Aceite vegetal', precio: 12000, stock: 8, categoria: 'Abarrotes' },
-    { id: 3, nombre: 'Leche Alpina 1L', descripcion: 'Leche entera', precio: 4500, stock: 0, categoria: 'Lácteos' },
-    { id: 4, nombre: 'Pan tajado', descripcion: 'Pan blanco tajado', precio: 6800, stock: 12, categoria: 'Panadería' },
-    { id: 5, nombre: 'Jabón Rey', descripcion: 'Jabón de lavar', precio: 2800, stock: 3, categoria: 'Aseo' },
-    { id: 6, nombre: 'Shampoo H&S', descripcion: 'Shampoo anticaspa', precio: 15000, stock: 20, categoria: 'Aseo' },
-    { id: 7, nombre: 'Pasta dental', descripcion: 'Colgate triple acción', precio: 8500, stock: 15, categoria: 'Aseo' },
-    { id: 8, nombre: 'Café Colcafé', descripcion: 'Café soluble 170g', precio: 18000, stock: 6, categoria: 'Bebidas' },
-]
-
 export default function Inventario() {
     const [productos, setProductos] = useState([])
     const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' })
     const [editando, setEditando] = useState(null)
     const [loading, setLoading] = useState(false)
+    const [cargando, setCargando] = useState(true)
     const [busqueda, setBusqueda] = useState('')
     const [filtroCategoria, setFiltroCategoria] = useState('')
     const [mostrarForm, setMostrarForm] = useState(false)
-    const [esDemo, setEsDemo] = useState(false)
+    const [error, setError] = useState(null)
 
     useEffect(() => { cargarProductos() }, [])
 
     const cargarProductos = async () => {
+        setCargando(true)
+        setError(null)
         const { data, error } = await supabase
             .from('productos')
             .select('*')
             .order('id', { ascending: true })
-
-        if (error || !data) {
-            setProductos(DEMO_PRODUCTOS)
-            setEsDemo(true)
-        } else {
-            setProductos(data)
-            setEsDemo(false)
-        }
+        if (error) { setError(error.message); setCargando(false); return }
+        setProductos(data)
+        setCargando(false)
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
+        setError(null)
         const payload = {
             nombre: form.nombre,
             descripcion: form.descripcion,
@@ -75,22 +63,14 @@ export default function Inventario() {
             stock: Number(form.stock),
             categoria: form.categoria,
         }
-
-        if (esDemo) {
-            // Modo demo: solo estado local
-            if (editando) {
-                setProductos(productos.map(p => p.id === editando ? { ...p, ...payload } : p))
-            } else {
-                setProductos([...productos, { id: Date.now(), ...payload }])
-            }
-        } else if (editando) {
-            await supabase.from('productos').update(payload).eq('id', editando)
-            await cargarProductos()
+        if (editando) {
+            const { error } = await supabase.from('productos').update(payload).eq('id', editando)
+            if (error) { setError(error.message); setLoading(false); return }
         } else {
-            await supabase.from('productos').insert([payload])
-            await cargarProductos()
+            const { error } = await supabase.from('productos').insert([payload])
+            if (error) { setError(error.message); setLoading(false); return }
         }
-
+        await cargarProductos()
         setForm({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' })
         setEditando(null)
         setMostrarForm(false)
@@ -105,18 +85,16 @@ export default function Inventario() {
 
     const handleEliminar = async (id) => {
         if (!confirm('¿Eliminar este producto?')) return
-        if (esDemo) {
-            setProductos(productos.filter(p => p.id !== id))
-        } else {
-            await supabase.from('productos').delete().eq('id', id)
-            await cargarProductos()
-        }
+        const { error } = await supabase.from('productos').delete().eq('id', id)
+        if (error) { setError(error.message); return }
+        await cargarProductos()
     }
 
     const cancelar = () => {
         setEditando(null)
         setMostrarForm(false)
         setForm({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '' })
+        setError(null)
     }
 
     const categorias = [...new Set(productos.map(p => p.categoria).filter(Boolean))]
@@ -137,16 +115,22 @@ export default function Inventario() {
         { label: 'Valor inventario', val: `$${valorTotal.toLocaleString()}`, emoji: '💰', accent: { bg: 'rgba(167,139,250,0.08)', border: 'rgba(167,139,250,0.2)', val: '#6d28d9' } },
     ]
 
+    if (cargando) return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', flexDirection: 'column', gap: 16 }}>
+            <div className="spinner spinner-dark" style={{ width: 28, height: 28, borderWidth: 3 }} />
+            <p style={{ color: 'var(--ink-20)', fontSize: 13, fontWeight: 600 }}>Cargando inventario...</p>
+        </div>
+    )
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {esDemo && (
-                <div style={{ background: 'rgba(245,200,66,0.1)', border: '1px solid rgba(245,200,66,0.3)', borderRadius: 10, padding: '10px 16px', fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    ⚠️ <strong>Modo demo:</strong> Los cambios no se guardan. Configura tus variables de entorno de Supabase para activar la base de datos.
+            {error && (
+                <div style={{ background: '#fff1f1', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: '#c53030', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    ⚠️ {error}
                 </div>
             )}
 
-            {/* Stats */}
             <div className="grid-stats">
                 {stats.map(s => (
                     <div key={s.label} className="card card-hover" style={{ padding: '20px 22px', background: `linear-gradient(135deg, #fff 60%, ${s.accent.bg})`, border: `1px solid ${s.accent.border}`, position: 'relative', overflow: 'hidden' }}>
@@ -158,7 +142,6 @@ export default function Inventario() {
                 ))}
             </div>
 
-            {/* Toolbar */}
             <div className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <div className="search-bar" style={{ flex: 1, minWidth: 180 }}>
                     <svg className="search-icon" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -174,7 +157,6 @@ export default function Inventario() {
                 </button>
             </div>
 
-            {/* Table */}
             <div className="card" style={{ overflow: 'hidden' }}>
                 <div style={{ padding: '16px 22px', borderBottom: '1px solid rgba(8,12,10,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                     <div>
@@ -188,7 +170,6 @@ export default function Inventario() {
                         </button>
                     )}
                 </div>
-
                 <div className="table-wrapper">
                     <table className="data-table">
                         <thead>
@@ -206,7 +187,7 @@ export default function Inventario() {
                                 <tr><td colSpan={6}>
                                     <div className="empty-state">
                                         <span style={{ fontSize: 30 }}>📦</span>
-                                        <p style={{ fontWeight: 800, color: 'var(--ink-40)', fontSize: 14, letterSpacing: '-0.02em' }}>No se encontraron productos</p>
+                                        <p style={{ fontWeight: 800, color: 'var(--ink-40)', fontSize: 14 }}>No se encontraron productos</p>
                                         <p style={{ color: 'var(--ink-20)', fontSize: 12 }}>{busqueda ? 'Prueba con otro término' : 'Registra el primer producto'}</p>
                                     </div>
                                 </td></tr>
@@ -248,7 +229,6 @@ export default function Inventario() {
                 </div>
             </div>
 
-            {/* Modal */}
             <Modal open={mostrarForm} onClose={cancelar}>
                 <div style={{ padding: '26px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
@@ -258,14 +238,13 @@ export default function Inventario() {
                             </div>
                             <div>
                                 <p style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 900, color: 'var(--ink)', letterSpacing: '-0.03em' }}>{editando ? 'Editar Producto' : 'Nuevo Producto'}</p>
-                                <p style={{ fontSize: 12, color: 'var(--ink-20)' }}>{editando ? 'Modifica la información' : 'Completa los datos del producto'}</p>
+                                <p style={{ fontSize: 12, color: 'var(--ink-20)' }}>{editando ? 'Modifica la información' : 'Completa los datos'}</p>
                             </div>
                         </div>
                         <button className="btn btn-secondary btn-icon" onClick={cancelar}>
                             <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                     </div>
-
                     <form onSubmit={handleSubmit}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
                             <div>
@@ -278,20 +257,21 @@ export default function Inventario() {
                             </div>
                             <div style={{ gridColumn: '1 / -1' }}>
                                 <FormLabel>Descripción</FormLabel>
-                                <input className="form-input" type="text" placeholder="Descripción breve del producto" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} />
+                                <input className="form-input" type="text" placeholder="Descripción breve" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} />
                             </div>
                             <div>
                                 <FormLabel>Precio *</FormLabel>
                                 <div style={{ position: 'relative' }}>
                                     <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-20)', fontSize: 14, fontWeight: 700 }}>$</span>
-                                    <input className="form-input" style={{ paddingLeft: 24 }} type="number" placeholder="0" value={form.precio} onChange={e => setForm({ ...form, precio: e.target.value })} required />
+                                    <input className="form-input" style={{ paddingLeft: 24 }} type="number" min="0" placeholder="0" value={form.precio} onChange={e => setForm({ ...form, precio: e.target.value })} required />
                                 </div>
                             </div>
                             <div>
-                                <FormLabel>Stock inicial *</FormLabel>
-                                <input className="form-input" type="number" placeholder="0" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} required />
+                                <FormLabel>Stock *</FormLabel>
+                                <input className="form-input" type="number" min="0" placeholder="0" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} required />
                             </div>
                         </div>
+                        {error && <p style={{ fontSize: 12, color: '#c53030', marginBottom: 12 }}>⚠️ {error}</p>}
                         <div style={{ display: 'flex', gap: 10, paddingTop: 16, borderTop: '1px solid rgba(8,12,10,0.06)' }}>
                             <button type="submit" className="btn btn-lime" disabled={loading} style={{ flex: 1 }}>
                                 {loading ? <><span className="spinner spinner-dark" />Guardando...</> : editando ? 'Guardar Cambios' : 'Registrar Producto'}
