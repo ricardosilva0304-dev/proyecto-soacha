@@ -42,47 +42,36 @@ function StatCard({ title, value, sub, icon, index }) {
     )
 }
 
-const DEMO_DATA = {
-    productos: [
-        { id: 1, nombre: 'Arroz Diana 500g', categoria: 'Abarrotes', stock: 45, precio: 3200 },
-        { id: 2, nombre: 'Aceite 1L', categoria: 'Abarrotes', stock: 8, precio: 12000 },
-        { id: 3, nombre: 'Leche Alpina 1L', categoria: 'Lácteos', stock: 0, precio: 4500 },
-        { id: 4, nombre: 'Pan tajado', categoria: 'Panadería', stock: 12, precio: 6800 },
-        { id: 5, nombre: 'Jabón Rey', categoria: 'Aseo', stock: 3, precio: 2800 },
-        { id: 6, nombre: 'Shampoo H&S', categoria: 'Aseo', stock: 20, precio: 15000 },
-    ],
-    clientes: [
-        { id: 1, nombre: 'María García' },
-        { id: 2, nombre: 'Carlos Pérez' },
-        { id: 3, nombre: 'Ana Rodríguez' },
-        { id: 4, nombre: 'Luis Martínez' },
-    ],
-    ventas: [
-        { id: 1, total: 45000, fecha: new Date().toISOString(), clientes: { nombre: 'María García' }, detalle_ventas: [{ cantidad: 3, productos: { nombre: 'Arroz Diana 500g' } }] },
-        { id: 2, total: 28000, fecha: new Date(Date.now() - 86400000).toISOString(), clientes: { nombre: 'Carlos Pérez' }, detalle_ventas: [{ cantidad: 2, productos: { nombre: 'Aceite 1L' } }] },
-        { id: 3, total: 67000, fecha: new Date(Date.now() - 172800000).toISOString(), clientes: { nombre: 'Ana Rodríguez' }, detalle_ventas: [{ cantidad: 1, productos: { nombre: 'Shampoo H&S' } }] },
-        { id: 4, total: 15000, fecha: new Date(Date.now() - 259200000).toISOString(), clientes: { nombre: 'Luis Martínez' }, detalle_ventas: [{ cantidad: 5, productos: { nombre: 'Jabón Rey' } }] },
-        { id: 5, total: 52000, fecha: new Date(Date.now() - 345600000).toISOString(), clientes: { nombre: 'María García' }, detalle_ventas: [{ cantidad: 4, productos: { nombre: 'Pan tajado' } }] },
-    ]
-}
-
 export default function Dashboard() {
     const [productos, setProductos] = useState([])
     const [clientes, setClientes] = useState([])
     const [ventas, setVentas] = useState([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
 
     useEffect(() => {
         const cargarDatos = async () => {
-            const [{ data: prods }, { data: clis }, { data: vents }] = await Promise.all([
-                supabase.from('productos').select('*').order('id', { ascending: true }),
-                supabase.from('clientes').select('*').order('id', { ascending: true }),
-                supabase.from('ventas').select('*, clientes(nombre), detalle_ventas(*, productos(nombre))').order('fecha', { ascending: false }),
-            ])
-            setProductos(prods || DEMO_DATA.productos)
-            setClientes(clis || DEMO_DATA.clientes)
-            setVentas(vents || DEMO_DATA.ventas)
-            setLoading(false)
+            try {
+                const [
+                    { data: prods, error: e1 },
+                    { data: clis, error: e2 },
+                    { data: vents, error: e3 }
+                ] = await Promise.all([
+                    supabase.from('productos').select('*').order('id', { ascending: true }),
+                    supabase.from('clientes').select('*').order('id', { ascending: true }),
+                    supabase.from('ventas').select('*, clientes(nombre), detalle_ventas(*, productos(nombre))').order('fecha', { ascending: false }),
+                ])
+                if (e1) throw new Error(e1.message)
+                if (e2) throw new Error(e2.message)
+                if (e3) throw new Error(e3.message)
+                setProductos(prods || [])
+                setClientes(clis || [])
+                setVentas(vents || [])
+            } catch (err) {
+                setError(err.message)
+            } finally {
+                setLoading(false)
+            }
         }
         cargarDatos()
     }, [])
@@ -125,6 +114,16 @@ export default function Dashboard() {
         </div>
     )
 
+    if (error) return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 14 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: '#fff1f1', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="22" height="22" fill="none" stroke="#c53030" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <p style={{ color: 'var(--ink)', fontWeight: 800, fontSize: 15 }}>Error al cargar datos</p>
+            <p style={{ color: 'var(--ink-20)', fontSize: 13, textAlign: 'center', maxWidth: 320 }}>{error}</p>
+        </div>
+    )
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gap)' }}>
 
@@ -139,7 +138,6 @@ export default function Dashboard() {
                 <div style={{ position: 'absolute', bottom: -40, right: 60, width: 200, height: 200, background: 'radial-gradient(circle, rgba(96,200,245,0.08) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
 
                 <div style={{ position: 'relative', zIndex: 1 }}>
-                    {/* Top row */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 16 }}>
                         <div>
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(200,245,96,0.1)', border: '1px solid rgba(200,245,96,0.2)', borderRadius: 99, padding: '4px 12px', marginBottom: 12 }}>
@@ -212,7 +210,7 @@ export default function Dashboard() {
                     {dataMasVendidos.length === 0 ? (
                         <div className="empty-state" style={{ padding: '28px' }}>
                             <span style={{ fontSize: 28 }}>📊</span>
-                            <p style={{ fontWeight: 700, color: 'var(--ink-30)', fontSize: 13 }}>Sin datos</p>
+                            <p style={{ fontWeight: 700, color: 'var(--ink-30)', fontSize: 13 }}>Sin datos aún</p>
                         </div>
                     ) : (
                         <ResponsiveContainer width="100%" height={175}>
@@ -250,8 +248,6 @@ export default function Dashboard() {
 
             {/* Bottom row */}
             <div className="grid-2">
-
-                {/* Stock alerts */}
                 <div className="card" style={{ overflow: 'hidden' }}>
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(8,12,10,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -288,7 +284,6 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Recent sales */}
                 <div className="card" style={{ overflow: 'hidden' }}>
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(8,12,10,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                         <div>

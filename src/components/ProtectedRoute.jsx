@@ -6,11 +6,9 @@ function ProtectedRoute({ children }) {
 
     if (cargando) {
         return (
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                    <p className="text-slate-400 text-sm">Cargando...</p>
-                </div>
+            <div style={{ minHeight: '100vh', background: 'var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+                <div className="spinner" style={{ borderColor: 'rgba(255,255,255,0.1)', borderTopColor: '#c8f560', width: 32, height: 32, borderWidth: 3 }} />
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: 600 }}>Cargando...</p>
             </div>
         )
     }

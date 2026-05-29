@@ -60,8 +60,8 @@ export default function Configuracion() {
     const [savingNegocio, setSavingNegocio] = useState(false)
 
     // Contraseña
-    const [pass, setPass] = useState({ nueva: '', confirmar: '' })
-    const [showPass, setShowPass] = useState({ nueva: false, confirmar: false })
+    const [pass, setPass] = useState({ actual: '', nueva: '', confirmar: '' })
+    const [showPass, setShowPass] = useState({ actual: false, nueva: false, confirmar: false })
     const [savingPass, setSavingPass] = useState(false)
 
     // Alertas de stock
@@ -77,7 +77,12 @@ export default function Configuracion() {
     useEffect(() => { cargarConfig() }, [])
 
     const cargarConfig = async () => {
-        const { data } = await supabase.from('configuracion').select('*').eq('id', 1).single()
+        const { data, error } = await supabase.from('configuracion').select('*').eq('id', 1).single()
+        if (error && error.code !== 'PGRST116') {
+            // PGRST116 = row not found, es OK si nunca se guardó config
+            console.warn('Config no encontrada:', error.message)
+            return
+        }
         if (data) {
             setNegocio({
                 nombre: data.nombre_negocio || '',
@@ -119,13 +124,34 @@ export default function Configuracion() {
 
     const handlePassword = async (e) => {
         e.preventDefault()
-        if (pass.nueva !== pass.confirmar) { showToast('Las contraseñas no coinciden', 'error'); return }
+        if (pass.nueva !== pass.confirmar) { showToast('Las contraseñas nuevas no coinciden', 'error'); return }
         if (pass.nueva.length < 6) { showToast('La contraseña debe tener al menos 6 caracteres', 'error'); return }
+        if (!pass.actual) { showToast('Ingresa tu contraseña actual', 'error'); return }
         setSavingPass(true)
+
+        // Verificar sesión activa antes de intentar cambiar
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+            showToast('Tu sesión expiró. Por favor vuelve a iniciar sesión.', 'error')
+            setSavingPass(false)
+            return
+        }
+
+        // Re-autenticar con contraseña actual para verificar identidad
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: session.user.email,
+            password: pass.actual,
+        })
+        if (signInError) {
+            showToast('La contraseña actual es incorrecta', 'error')
+            setSavingPass(false)
+            return
+        }
+
         const { error } = await supabase.auth.updateUser({ password: pass.nueva })
         setSavingPass(false)
         if (error) { showToast('Error: ' + error.message, 'error'); return }
-        setPass({ nueva: '', confirmar: '' })
+        setPass({ actual: '', nueva: '', confirmar: '' })
         showToast('Contraseña actualizada correctamente')
     }
 
@@ -161,7 +187,7 @@ export default function Configuracion() {
                     </div>
                     <div>
                         <p style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 17, fontWeight: 900, letterSpacing: '-0.03em' }}>{usuario?.nombre || usuario?.email}</p>
-                        <p style={{ color: 'var(--ink-20)', fontSize: 12, marginTop: 2 }}>{usuario?.email} · Administrador</p>
+                        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 2 }}>{usuario?.email}</p>
                     </div>
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(200,245,96,0.1)', border: '1px solid rgba(200,245,96,0.2)', borderRadius: 99, padding: '5px 13px' }}>
                         <span className="pulse-dot" />
@@ -212,8 +238,9 @@ export default function Configuracion() {
                 <form onSubmit={handlePassword}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 18 }}>
                         {[
+                            { key: 'actual', label: 'Contraseña actual', placeholder: 'Tu contraseña actual' },
                             { key: 'nueva', label: 'Nueva contraseña', placeholder: 'Mínimo 6 caracteres' },
-                            { key: 'confirmar', label: 'Confirmar contraseña', placeholder: 'Repite la contraseña' },
+                            { key: 'confirmar', label: 'Confirmar nueva contraseña', placeholder: 'Repite la contraseña' },
                         ].map(f => (
                             <Field key={f.key} label={f.label}>
                                 <div style={{ position: 'relative' }}>
@@ -237,7 +264,6 @@ export default function Configuracion() {
                             </Field>
                         ))}
                     </div>
-                    {/* Indicador de fortaleza */}
                     {pass.nueva && (
                         <div style={{ marginBottom: 16 }}>
                             <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
