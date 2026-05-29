@@ -24,31 +24,114 @@ export default function Login() {
         setLoading(false)
     }
 
-    const inputStyle = {
-        width: '100%', padding: '12px 14px 12px 40px',
-        background: 'rgba(255,255,255,0.06)',
-        border: '1.5px solid rgba(255,255,255,0.08)',
-        borderRadius: 12, fontSize: 14, color: '#fff',
-        outline: 'none', fontFamily: 'var(--font-body)',
-        transition: 'all 0.15s', letterSpacing: '-0.01em',
-        WebkitTextFillColor: '#fff',
-    }
-
-    const focusInput = e => {
-        e.target.style.borderColor = 'rgba(200,245,96,0.5)'
-        e.target.style.background = 'rgba(255,255,255,0.09)'
-        e.target.style.boxShadow = '0 0 0 3px rgba(200,245,96,0.1)'
-    }
-    const blurInput = e => {
-        e.target.style.borderColor = 'rgba(255,255,255,0.08)'
-        e.target.style.background = 'rgba(255,255,255,0.06)'
-        e.target.style.boxShadow = 'none'
-    }
-
     return (
         <div className="login-page">
 
-            {/* Panel izquierdo — solo desktop */}
+            {/* ── Estilos globales para esta página ── */}
+            <style>{`
+                .login-input {
+                    width: 100%;
+                    padding: 13px 14px 13px 42px;
+                    background: rgba(255,255,255,0.07);
+                    border: 1.5px solid rgba(255,255,255,0.1);
+                    border-radius: 12px;
+                    font-size: 15px;
+                    font-family: var(--font-body);
+                    color: #ffffff;
+                    outline: none;
+                    transition: all 0.18s;
+                    letter-spacing: -0.01em;
+                    caret-color: #c8f560;
+                }
+                .login-input::placeholder {
+                    color: rgba(255,255,255,0.25);
+                }
+                .login-input:focus {
+                    border-color: rgba(200,245,96,0.55);
+                    background: rgba(255,255,255,0.1);
+                    box-shadow: 0 0 0 3px rgba(200,245,96,0.12);
+                }
+                /* ── CLAVE: neutralizar el autofill del navegador ── */
+                .login-input:-webkit-autofill,
+                .login-input:-webkit-autofill:hover,
+                .login-input:-webkit-autofill:focus,
+                .login-input:-webkit-autofill:active {
+                    -webkit-box-shadow: 0 0 0 9999px #1a2420 inset !important;
+                    -webkit-text-fill-color: #ffffff !important;
+                    caret-color: #c8f560;
+                    border-color: rgba(200,245,96,0.3) !important;
+                    transition: background-color 9999s ease-in-out 0s;
+                }
+                .login-input-wrap { position: relative; }
+                .login-input-icon {
+                    position: absolute;
+                    left: 13px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    color: rgba(255,255,255,0.3);
+                    pointer-events: none;
+                    display: flex;
+                    align-items: center;
+                }
+                .login-label {
+                    display: block;
+                    font-size: 10.5px;
+                    font-weight: 800;
+                    color: rgba(255,255,255,0.4);
+                    letter-spacing: 0.1em;
+                    text-transform: uppercase;
+                    margin-bottom: 8px;
+                }
+                .login-submit {
+                    width: 100%;
+                    padding: 14px;
+                    border-radius: 12px;
+                    border: none;
+                    font-size: 15px;
+                    font-weight: 900;
+                    font-family: var(--font-display);
+                    letter-spacing: -0.02em;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 9px;
+                    cursor: pointer;
+                    transition: all 0.18s;
+                    min-height: 50px;
+                }
+                .login-submit:not(:disabled) {
+                    background: linear-gradient(135deg, #c8f560, #a8d940);
+                    color: #080c0a;
+                    box-shadow: 0 8px 28px rgba(200,245,96,0.35);
+                }
+                .login-submit:not(:disabled):hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 12px 36px rgba(200,245,96,0.45);
+                }
+                .login-submit:not(:disabled):active { transform: scale(0.98); }
+                .login-submit:disabled {
+                    background: rgba(255,255,255,0.07);
+                    color: rgba(255,255,255,0.3);
+                    cursor: not-allowed;
+                }
+                .show-pass-btn {
+                    position: absolute;
+                    right: 12px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    color: rgba(255,255,255,0.3);
+                    display: flex;
+                    align-items: center;
+                    padding: 4px;
+                    transition: color 0.15s;
+                }
+                .show-pass-btn:hover { color: rgba(255,255,255,0.7); }
+            `}</style>
+
+            {/* ── Panel izquierdo (solo desktop) ── */}
             <div className="login-brand">
                 <div className="login-brand-inner">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -57,98 +140,115 @@ export default function Login() {
                         </div>
                         <div>
                             <p style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 16, fontWeight: 900, letterSpacing: '-0.03em' }}>GestiónSoacha</p>
-                            <p style={{ color: 'var(--ink-20)', fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Plataforma Empresarial</p>
+                            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Plataforma Empresarial</p>
                         </div>
                     </div>
 
                     <div>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(200,245,96,0.1)', border: '1px solid rgba(200,245,96,0.2)', borderRadius: 99, padding: '5px 13px', marginBottom: 24 }}>
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--lime)' }} />
-                            <span style={{ fontSize: 11, color: 'var(--lime)', fontWeight: 700, letterSpacing: '0.04em' }}>PROYECTO DE GRADO · UNIMINUTO</span>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c8f560' }} />
+                            <span style={{ fontSize: 11, color: '#c8f560', fontWeight: 700, letterSpacing: '0.04em' }}>PROYECTO DE GRADO · UNIMINUTO</span>
                         </div>
-                        <h1 style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 40, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 18 }}>
-                            Gestiona tu<br />negocio de forma<br /><span style={{ color: 'var(--lime)' }}>inteligente.</span>
+                        <h1 style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 'clamp(32px,3.5vw,44px)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 18 }}>
+                            Gestiona tu<br />negocio de forma<br /><span style={{ color: '#c8f560' }}>inteligente.</span>
                         </h1>
-                        <p style={{ color: 'var(--ink-10)', fontSize: 15, lineHeight: 1.7, marginBottom: 36 }}>
+                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15, lineHeight: 1.7, marginBottom: 36 }}>
                             Control total de inventario, ventas y clientes en una sola plataforma diseñada para los negocios de Soacha.
                         </p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                             {['📦 Inventario en tiempo real', '🛒 Punto de venta ágil', '👥 CRM integrado', '📊 Reportes y métricas'].map(f => (
-                                <span key={f} style={{ fontSize: 12.5, color: 'var(--ink-05)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 13px', fontWeight: 500 }}>{f}</span>
+                                <span key={f} style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 13px', fontWeight: 500 }}>{f}</span>
                             ))}
                         </div>
                     </div>
 
-                    <p style={{ fontSize: 11, color: 'var(--ink-30)', letterSpacing: '0.02em' }}>
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.02em' }}>
                         Corporación Universitaria Minuto de Dios · Soacha, Cundinamarca
                     </p>
                 </div>
             </div>
 
-            {/* Panel derecho — formulario */}
+            {/* ── Panel derecho (formulario) ── */}
             <div className="login-form-panel">
                 <div style={{ width: '100%', maxWidth: 400 }}>
 
                     {/* Logo mobile */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }}>
-                        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg,#c8f560,#a8d940)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <svg width="17" height="17" fill="none" stroke="#080c0a" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10" /></svg>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 44 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 11, background: 'linear-gradient(135deg,#c8f560,#a8d940)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <svg width="18" height="18" fill="none" stroke="#080c0a" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10" /></svg>
                         </div>
                         <span style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 16, fontWeight: 800, letterSpacing: '-0.02em' }}>GestiónSoacha</span>
                     </div>
 
-                    <div style={{ marginBottom: 32 }}>
-                        <h2 style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 28, fontWeight: 900, letterSpacing: '-0.04em', marginBottom: 6, lineHeight: 1.1 }}>Bienvenido de nuevo</h2>
-                        <p style={{ color: 'var(--ink-20)', fontSize: 14 }}>Ingresa tus credenciales para acceder al sistema</p>
+                    <div style={{ marginBottom: 36 }}>
+                        <h2 style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 'clamp(24px,4vw,32px)', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: 8, lineHeight: 1.1 }}>Bienvenido de nuevo</h2>
+                        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>Ingresa tus credenciales para acceder al sistema</p>
                     </div>
 
                     {error && (
-                        <div style={{ background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.25)', borderRadius: 12, padding: '12px 14px', marginBottom: 20, display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <div style={{ background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 12, padding: '13px 15px', marginBottom: 24, display: 'flex', gap: 10, alignItems: 'center' }}>
                             <svg width="16" height="16" fill="none" stroke="#ff9b9b" viewBox="0 0 24 24" style={{ flexShrink: 0 }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             <p style={{ color: '#ff9b9b', fontSize: 13 }}>{error}</p>
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit}>
-                        <div style={{ marginBottom: 14 }}>
-                            <label style={{ display: 'block', fontSize: 10.5, fontWeight: 800, color: 'var(--ink-20)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 7 }}>Correo electrónico</label>
-                            <div style={{ position: 'relative' }}>
-                                <svg width="15" height="15" fill="none" stroke="var(--ink-30)" viewBox="0 0 24 24" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="tu@correo.com" style={inputStyle} onFocus={focusInput} onBlur={blurInput} autoComplete="email" />
+                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+                        {/* Email */}
+                        <div>
+                            <label className="login-label">Correo electrónico</label>
+                            <div className="login-input-wrap">
+                                <span className="login-input-icon">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                </span>
+                                <input
+                                    className="login-input"
+                                    type="email"
+                                    placeholder="tu@correo.com"
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                    required
+                                    autoComplete="email"
+                                />
                             </div>
                         </div>
 
-                        <div style={{ marginBottom: 28 }}>
-                            <label style={{ display: 'block', fontSize: 10.5, fontWeight: 800, color: 'var(--ink-20)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 7 }}>Contraseña</label>
-                            <div style={{ position: 'relative' }}>
-                                <svg width="15" height="15" fill="none" stroke="var(--ink-30)" viewBox="0 0 24 24" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                                <input type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" style={{ ...inputStyle, paddingRight: 44 }} onFocus={focusInput} onBlur={blurInput} autoComplete="current-password" />
-                                <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--ink-20)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}>
+                        {/* Contraseña */}
+                        <div>
+                            <label className="login-label">Contraseña</label>
+                            <div className="login-input-wrap">
+                                <span className="login-input-icon">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                </span>
+                                <input
+                                    className="login-input"
+                                    type={showPass ? 'text' : 'password'}
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={e => setPassword(e.target.value)}
+                                    required
+                                    autoComplete="current-password"
+                                    style={{ paddingRight: 44 }}
+                                />
+                                <button type="button" className="show-pass-btn" onClick={() => setShowPass(s => !s)} tabIndex={-1}>
                                     {showPass
-                                        ? <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
-                                        : <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                        ? <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                                        : <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                                     }
                                 </button>
                             </div>
                         </div>
 
-                        <button type="submit" disabled={loading} style={{
-                            width: '100%', padding: '13px', borderRadius: 12, border: 'none',
-                            background: loading ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#c8f560,#a8d940)',
-                            color: loading ? 'rgba(255,255,255,0.4)' : '#080c0a',
-                            fontSize: 14.5, fontWeight: 900, cursor: loading ? 'not-allowed' : 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-                            fontFamily: 'var(--font-display)', letterSpacing: '-0.02em',
-                            boxShadow: loading ? 'none' : '0 8px 28px rgba(200,245,96,0.35)',
-                            transition: 'all 0.18s', minHeight: 48,
-                        }}>
+                        {/* Botón */}
+                        <button type="submit" className="login-submit" disabled={loading} style={{ marginTop: 8 }}>
                             {loading
-                                ? <><span className="spinner" style={{ borderColor: 'rgba(255,255,255,0.2)', borderTopColor: 'rgba(255,255,255,0.6)' }} />Verificando...</>
-                                : <>Ingresar al Sistema <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg></>}
+                                ? <><span className="spinner" style={{ borderColor: 'rgba(255,255,255,0.2)', borderTopColor: 'rgba(255,255,255,0.7)' }} />Verificando...</>
+                                : <>Ingresar al Sistema <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg></>
+                            }
                         </button>
                     </form>
 
-                    <p style={{ textAlign: 'center', color: 'var(--ink-30)', fontSize: 11, marginTop: 28, letterSpacing: '0.02em' }}>
+                    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.18)', fontSize: 11, marginTop: 36, letterSpacing: '0.02em' }}>
                         GestiónSoacha · Proyecto de Grado UNIMINUTO 2025
                     </p>
                 </div>
